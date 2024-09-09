@@ -30,7 +30,7 @@ class GitHubService {
     }
   }
 
-  Future<void> createGitHubIssue(String title, String body) async {
+  Future<void> createGitHubIssue(String title, String body, String selectedLabel) async {
     final url = 'https://api.github.com/repos/$owner/$issueRepo/issues';
 
     final response = await http.post(
@@ -42,12 +42,31 @@ class GitHubService {
       body: json.encode({
         'title': title,
         'body': body,
-        'label': ['notes'],
+        'labels': [selectedLabel],
       }),
     );
 
     if (response.statusCode != 201) {
       throw Exception('Failed to create issue: ${response.body}');
     }
+  }
+
+  Future<List<String>> fetchGitHubLabels() async {
+    final url = 'https://api.github.com/repos/$owner/$issueRepo/labels';
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch labels: ${response.body}');
+    }
+
+    final List<dynamic> labels = json.decode(response.body);
+    return labels.map((label) => label['name'] as String).toList();
   }
 }
