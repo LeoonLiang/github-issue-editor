@@ -1,4 +1,4 @@
-package com.example.flutter_editor
+package com.leoon.blogadmin
 
 import io.flutter.embedding.android.FlutterActivity
 
