@@ -98,61 +98,77 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Title',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.all(8.0), // 设置与输入框相同的 padding
-            padding: const EdgeInsets.all(12.0), // 设置与输入框相同的 padding
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey), // 设置边框颜色
-              borderRadius: BorderRadius.circular(8.0), // 设置圆角边框
-            ),
-            child: quill.QuillEditor.basic(controller: _controller),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: DropdownButton<String>(
-            value: _selectedLabel,
-            items: _labels.map((label) {
-              return DropdownMenuItem(
-                value: label,
-                child: Text(label),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedLabel = value as String;
-              });
-            },
-            hint: const Text('Select a label'),
-          ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
           children: [
-            ElevatedButton(
-              onPressed: _pickImage,
-              child: Text('Upload Image'),
+            // 标题输入框
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(),
+              ),
             ),
-            ElevatedButton(
-              onPressed: _submitMarkdown,
-              child: Text('Submit to GitHub'),
+            const SizedBox(height: 8.0), // 添加间距
+
+            // 工具栏
+            Container(
+              child: quill.QuillSimpleToolbar(
+                controller: _controller,
+                configurations: const quill.QuillSimpleToolbarConfigurations(),
+              ),
+            ),
+            const SizedBox(height: 8.0), // 添加间距
+
+            // 编辑器
+            Container(
+              height: 300.0, // 调整编辑器高度
+              padding: const EdgeInsets.all(12.0), // 设置 padding
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey), // 设置边框颜色
+                borderRadius: BorderRadius.circular(8.0), // 设置圆角边框
+              ),
+              child: quill.QuillEditor.basic(controller: _controller),
+            ),
+            const SizedBox(height: 8.0), // 添加间距
+
+            // 标签选择器
+            DropdownButton<String>(
+              value: _selectedLabel,
+              items: _labels.map((label) {
+                return DropdownMenuItem(
+                  value: label,
+                  child: Text(label),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedLabel = value as String;
+                });
+              },
+              hint: const Text('Select a label'),
+            ),
+            const SizedBox(height: 8.0), // 添加间距
+
+            // 按钮行
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _pickImage,
+                  child: const Text('Upload Image'),
+                ),
+                ElevatedButton(
+                  onPressed: _submitMarkdown,
+                  child: const Text('Submit to GitHub'),
+                ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
