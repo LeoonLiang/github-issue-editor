@@ -8,7 +8,7 @@ class GitHubService {
   final String picRepo = 'pic';
   final String issueRepo = 'vercel-nuxt-blog';
 
-  Future<void> uploadImageToGitHub(String filePath, String fileName) async {
+  Future<String> uploadImageToGitHub(String filePath, String fileName) async {
     final fileContent = base64Encode(await File(filePath).readAsBytes());
     final url =
         'https://api.github.com/repos/$owner/$picRepo/contents/$fileName';
@@ -24,10 +24,15 @@ class GitHubService {
         'content': fileContent,
       }),
     );
-
     if (response.statusCode != 201) {
       throw Exception('Failed to upload image: ${response.body}');
     }
+    // 解析响应 JSON 获取图片的下载 URL
+    final jsonResponse = json.decode(response.body);
+    final downloadUrl = jsonResponse['content']['download_url'] as String;
+    print(jsonResponse);
+    print(downloadUrl);
+    return downloadUrl;
   }
 
   Future<void> createGitHubIssue(String title, String body, String selectedLabel) async {

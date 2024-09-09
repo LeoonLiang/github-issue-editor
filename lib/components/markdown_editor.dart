@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 import '../services/github.dart';
 import '../services/image_processing.dart';
 import 'dart:io';
+import 'dart:math';
 
 class MarkdownEditor extends StatefulWidget {
   @override
@@ -37,6 +38,16 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     }
   }
 
+  // 生成指定长度的随机字符串
+  String _generateRandomString(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    return String.fromCharCodes(Iterable.generate(
+      length,
+          (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+    ));
+  }
+
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -45,15 +56,30 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
       final githubService = GitHubService();
 
       final originalFile = File(image.path);
-      final originalFileName = path.basename(originalFile.path);
+      final randomStr = _generateRandomString(12);
+      final originalExtension = path.extension(originalFile.path); // 获取文件扩展名
+      final originalFileName = randomStr + originalExtension; // 生成随机文件名
       await githubService.uploadImageToGitHub(
           originalFile.path, 'img/$originalFileName');
 
       // 转换为 WebP 并上传
       final webpFile = await imageProcessing.convertToWebP(originalFile);
-      final webpFileName = path.basename(webpFile.path);
-      await githubService.uploadImageToGitHub(
+      final webpExtension = path.extension(webpFile.path); // 获取文件扩展名
+      final webpFileName = randomStr + webpExtension; // 生成随机文件名
+      final webpImageUrl = await githubService.uploadImageToGitHub(
           webpFile.path, 'img/$webpFileName');
+      // 获取上传后的图片 URL
+      final imageUrl = webpImageUrl; // 选择 WebP 格式的 URL
+
+
+      // 在 Markdown 编辑器中插入图片链接
+      final imageMarkdown = '\n![image]($imageUrl)\n';
+
+      // 获取当前光标位置
+      final int cursorPosition = _controller.selection.baseOffset;
+
+      // 在当前光标位置插入图片 Markdown
+      _controller.replaceText(cursorPosition, 0, imageMarkdown, TextSelection.collapsed(offset: cursorPosition + imageMarkdown.length));
     }
   }
 
