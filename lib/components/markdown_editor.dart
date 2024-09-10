@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import '../services/github.dart';
 import '../services/image_processing.dart';
+import '../services/music.dart';
 import 'dart:io';
 import 'dart:math';
 
@@ -19,6 +20,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   final imageProcessing = ImageProcessing();
   bool _isLoading = false;
   bool _isUploadLoading = false;
+  bool _isMusicLoading = false;
   List<String> _labels = [];
   String _selectedLabel = 'note';
 
@@ -39,16 +41,71 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     }
   }
 
+  void _insertTextToMarkdown(String text) {
+    final int cursorPosition = _controller.selection.baseOffset;
+    // 在当前光标位置插入数据
+    _controller.replaceText(cursorPosition, 0, text,
+        TextSelection.collapsed(offset: cursorPosition + text.length));
+  }
+
+  Future<void> _fetchMusicCardDataAndInsertToMarkdown(String id) async {
+    if (_isMusicLoading) return;
+    setState(() {
+      _isMusicLoading = true;
+    });
+    final musicService = MusicService();
+    try {
+      final cardData = await musicService.fetchMusicCardData(id);
+      _insertTextToMarkdown('\n$cardData');
+    } catch (error) {
+      _showErrorMessage('Failed to load music card data');
+    } finally {
+      setState(() {
+        _isMusicLoading = false;
+      });
+    }
+  }
+
+  Future<void> _showMusicInputDialog() async {
+    final TextEditingController idController = TextEditingController();
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('输入ID'),
+            content: TextField(
+              controller: idController,
+              decoration: const InputDecoration(hintText: '输入ID'),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('取消'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('确认'),
+                onPressed: () {
+                  final id = idController.text;
+                  Navigator.of(context).pop();
+                  _fetchMusicCardDataAndInsertToMarkdown(id);
+                },
+              ),
+            ],
+          );
+        });
+  }
+
   // 生成指定长度的随机字符串
   String _generateRandomString(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     final random = Random();
     return String.fromCharCodes(Iterable.generate(
       length,
-          (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      (_) => chars.codeUnitAt(random.nextInt(chars.length)),
     ));
   }
-
 
   Future<void> _pickImage() async {
     if (_isUploadLoading) return;
@@ -77,7 +134,6 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         // 获取上传后的图片 URL
         final imageUrl = webpImageUrl; // 选择 WebP 格式的 URL
 
-
         // 在 Markdown 编辑器中插入图片链接
         final imageMarkdown = '\n![image]($imageUrl)\n';
 
@@ -85,15 +141,19 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         final int cursorPosition = _controller.selection.baseOffset;
 
         // 在当前光标位置插入图片 Markdown
-        _controller.replaceText(cursorPosition, 0, imageMarkdown, TextSelection.collapsed(offset: cursorPosition + imageMarkdown.length));
-      } catch(error){
+        _controller.replaceText(
+            cursorPosition,
+            0,
+            imageMarkdown,
+            TextSelection.collapsed(
+                offset: cursorPosition + imageMarkdown.length));
+      } catch (error) {
         _showErrorMessage('图片上传出错');
       } finally {
         setState(() {
           _isUploadLoading = false;
         });
       }
-
     }
   }
 
@@ -106,7 +166,8 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
     try {
       // 在这里执行提交到 GitHub 的逻辑
-      await githubService.createGitHubIssue(title, markdownText, _selectedLabel);
+      await githubService.createGitHubIssue(
+          title, markdownText, _selectedLabel);
 
       // 提交成功后
       _showSuccessMessage();
@@ -120,9 +181,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         _isLoading = false;
       });
     }
-
   }
-
 
   void _showSuccessMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -197,10 +256,18 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: _isUploadLoading ? null : _pickImage,
-                  child:_isUploadLoading
+                  onPressed: _isMusicLoading
+                      ? null
+                      : _showMusicInputDialog, // 显示输入ID的弹框
+                  child: _isMusicLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('上传图片'),
+                      : const Text('音乐'),
+                ),
+                ElevatedButton(
+                  onPressed: _isUploadLoading ? null : _pickImage,
+                  child: _isUploadLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('图片'),
                 ),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _submitMarkdown,
