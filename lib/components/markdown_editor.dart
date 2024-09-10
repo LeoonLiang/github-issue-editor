@@ -55,8 +55,8 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     });
     final musicService = MusicService();
     // 检查输入内容是否包含域名
-    final urlPattern = RegExp(r'https?:\/\/music\.163\.com\/song\?id=(\d+)');
-    final match = urlPattern.firstMatch(input);
+    final idPattern = RegExp(r'[?&]id=(\d+)');
+    final match = idPattern.firstMatch(input);
 
     // 如果匹配到域名并提取出 ID
     if (match != null) {
@@ -80,10 +80,10 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('输入ID'),
+            title: const Text('网易云音乐卡片'),
             content: TextField(
               controller: idController,
-              decoration: const InputDecoration(hintText: '输入ID'),
+              decoration: const InputDecoration(hintText: '输入ID或分享链接'),
             ),
             actions: <Widget>[
               TextButton(
