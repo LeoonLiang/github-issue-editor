@@ -18,6 +18,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   final ImagePicker _picker = ImagePicker();
   final imageProcessing = ImageProcessing();
   bool _isLoading = false;
+  bool _isUploadLoading = false;
   List<String> _labels = [];
   String _selectedLabel = 'note';
 
@@ -50,36 +51,49 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
 
   Future<void> _pickImage() async {
+    if (_isUploadLoading) return;
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      final githubService = GitHubService();
+      setState(() {
+        _isUploadLoading = true;
+      });
+      try {
+        final githubService = GitHubService();
 
-      final originalFile = File(image.path);
-      final randomStr = _generateRandomString(12);
-      final originalExtension = path.extension(originalFile.path); // 获取文件扩展名
-      final originalFileName = randomStr + originalExtension; // 生成随机文件名
-      await githubService.uploadImageToGitHub(
-          originalFile.path, 'img/$originalFileName');
+        final originalFile = File(image.path);
+        final randomStr = _generateRandomString(12);
+        final originalExtension = path.extension(originalFile.path); // 获取文件扩展名
+        final originalFileName = randomStr + originalExtension; // 生成随机文件名
+        await githubService.uploadImageToGitHub(
+            originalFile.path, 'img/$originalFileName');
 
-      // 转换为 WebP 并上传
-      final webpFile = await imageProcessing.convertToWebP(originalFile);
-      final webpExtension = path.extension(webpFile.path); // 获取文件扩展名
-      final webpFileName = randomStr + webpExtension; // 生成随机文件名
-      final webpImageUrl = await githubService.uploadImageToGitHub(
-          webpFile.path, 'img/$webpFileName');
-      // 获取上传后的图片 URL
-      final imageUrl = webpImageUrl; // 选择 WebP 格式的 URL
+        // 转换为 WebP 并上传
+        final webpFile = await imageProcessing.convertToWebP(originalFile);
+        final webpExtension = path.extension(webpFile.path); // 获取文件扩展名
+        final webpFileName = randomStr + webpExtension; // 生成随机文件名
+        final webpImageUrl = await githubService.uploadImageToGitHub(
+            webpFile.path, 'img/$webpFileName');
+        // 获取上传后的图片 URL
+        final imageUrl = webpImageUrl; // 选择 WebP 格式的 URL
 
 
-      // 在 Markdown 编辑器中插入图片链接
-      final imageMarkdown = '\n![image]($imageUrl)\n';
+        // 在 Markdown 编辑器中插入图片链接
+        final imageMarkdown = '\n![image]($imageUrl)\n';
 
-      // 获取当前光标位置
-      final int cursorPosition = _controller.selection.baseOffset;
+        // 获取当前光标位置
+        final int cursorPosition = _controller.selection.baseOffset;
 
-      // 在当前光标位置插入图片 Markdown
-      _controller.replaceText(cursorPosition, 0, imageMarkdown, TextSelection.collapsed(offset: cursorPosition + imageMarkdown.length));
+        // 在当前光标位置插入图片 Markdown
+        _controller.replaceText(cursorPosition, 0, imageMarkdown, TextSelection.collapsed(offset: cursorPosition + imageMarkdown.length));
+      } catch(error){
+        _showErrorMessage('图片上传出错');
+      } finally {
+        setState(() {
+          _isUploadLoading = false;
+        });
+      }
+
     }
   }
 
@@ -140,13 +154,13 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
             const SizedBox(height: 8.0), // 添加间距
 
             // 工具栏
-            Container(
-              child: quill.QuillSimpleToolbar(
-                controller: _controller,
-                configurations: const quill.QuillSimpleToolbarConfigurations(),
-              ),
-            ),
-            const SizedBox(height: 8.0), // 添加间距
+            // Container(
+            //   child: quill.QuillSimpleToolbar(
+            //     controller: _controller,
+            //     configurations: const quill.QuillSimpleToolbarConfigurations(),
+            //   ),
+            // ),
+            // const SizedBox(height: 8.0), // 添加间距
 
             // 编辑器
             Container(
@@ -183,12 +197,16 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: _pickImage,
-                  child: const Text('Upload Image'),
+                  onPressed: _isUploadLoading ? null : _pickImage,
+                  child:_isUploadLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('上传图片'),
                 ),
                 ElevatedButton(
-                  onPressed: _submitMarkdown,
-                  child: const Text('Submit to GitHub'),
+                  onPressed: _isLoading ? null : _submitMarkdown,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('提交'),
                 ),
               ],
             ),
