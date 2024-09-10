@@ -48,14 +48,22 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         TextSelection.collapsed(offset: cursorPosition + text.length));
   }
 
-  Future<void> _fetchMusicCardDataAndInsertToMarkdown(String id) async {
+  Future<void> _fetchMusicCardDataAndInsertToMarkdown(String input) async {
     if (_isMusicLoading) return;
     setState(() {
       _isMusicLoading = true;
     });
     final musicService = MusicService();
+    // 检查输入内容是否包含域名
+    final urlPattern = RegExp(r'https?:\/\/music\.163\.com\/song\?id=(\d+)');
+    final match = urlPattern.firstMatch(input);
+
+    // 如果匹配到域名并提取出 ID
+    if (match != null) {
+      input = match.group(1)!; // 获取正则匹配到的第一个分组，即 ID
+    }
     try {
-      final cardData = await musicService.fetchMusicCardData(id);
+      final cardData = await musicService.fetchMusicCardData(input);
       _insertTextToMarkdown('\n$cardData');
     } catch (error) {
       _showErrorMessage('Failed to load music card data');
