@@ -136,7 +136,8 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         // 转换为 WebP 并上传
         final webpFile = await imageProcessing.convertToWebP(originalFile);
         final webpExtension = path.extension(webpFile.path); // 获取文件扩展名
-        final webpFileName = randomStr + webpExtension; // 生成随机文件名
+        final webpFileName =
+            randomStr + originalExtension + webpExtension; // 生成随机文件名
         final webpImageUrl = await githubService.uploadImageToGitHub(
             webpFile.path, 'img/$webpFileName');
         // 获取上传后的图片 URL
