@@ -115,54 +115,55 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     ));
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
     if (_isUploadLoading) return;
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
+    // Select multiple images
+    final List<XFile>? images = await _picker.pickMultiImage();
+
+    if (images != null && images.isNotEmpty) {
       setState(() {
         _isUploadLoading = true;
       });
-      try {
-        final githubService = GitHubService();
 
-        final originalFile = File(image.path);
-        final randomStr = _generateRandomString(12);
-        final originalExtension = path.extension(originalFile.path); // 获取文件扩展名
-        final originalFileName = randomStr + originalExtension; // 生成随机文件名
-        await githubService.uploadImageToGitHub(
-            originalFile.path, 'img/$originalFileName');
+      final githubService = GitHubService();
 
-        // 转换为 WebP 并上传
-        final webpFile = await imageProcessing.convertToWebP(originalFile);
-        final webpExtension = path.extension(webpFile.path); // 获取文件扩展名
-        final webpFileName =
-            randomStr + originalExtension + webpExtension; // 生成随机文件名
-        final webpImageUrl = await githubService.uploadImageToGitHub(
-            webpFile.path, 'img/$webpFileName');
-        // 获取上传后的图片 URL
-        final imageUrl = webpImageUrl; // 选择 WebP 格式的 URL
+      for (final image in images) {
+        try {
+          final originalFile = File(image.path);
+          final randomStr = _generateRandomString(12);
+          final originalExtension = path.extension(originalFile.path);
+          final originalFileName = randomStr + originalExtension;
 
-        // 在 Markdown 编辑器中插入图片链接
-        final imageMarkdown = '\n![image]($imageUrl)\n';
+          // Upload original image
+          await githubService.uploadImageToGitHub(
+              originalFile.path, 'img/$originalFileName');
 
-        // 获取当前光标位置
-        final int cursorPosition = _controller.selection.baseOffset;
+          // Convert to WebP and upload
+          final webpFile = await imageProcessing.convertToWebP(originalFile);
+          final webpExtension = path.extension(webpFile.path);
+          final webpFileName = randomStr + originalExtension + webpExtension;
+          final webpImageUrl = await githubService.uploadImageToGitHub(
+              webpFile.path, 'img/$webpFileName');
 
-        // 在当前光标位置插入图片 Markdown
-        _controller.replaceText(
-            cursorPosition,
-            0,
-            imageMarkdown,
-            TextSelection.collapsed(
-                offset: cursorPosition + imageMarkdown.length));
-      } catch (error) {
-        _showErrorMessage('图片上传出错');
-      } finally {
-        setState(() {
-          _isUploadLoading = false;
-        });
+          final imageUrl = webpImageUrl; // Choose WebP format URL
+
+          // Insert image link into Markdown
+          final imageMarkdown = '\n![image]($imageUrl)\n';
+          final int cursorPosition = _controller.selection.baseOffset;
+          _controller.replaceText(
+              cursorPosition,
+              0,
+              imageMarkdown,
+              TextSelection.collapsed(
+                  offset: cursorPosition + imageMarkdown.length));
+        } catch (error) {
+          _showErrorMessage('图片上传出错');
+        }
       }
+      setState(() {
+        _isUploadLoading = false;
+      });
     }
   }
 
@@ -273,7 +274,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                       : const Text('音乐'),
                 ),
                 ElevatedButton(
-                  onPressed: _isUploadLoading ? null : _pickImage,
+                  onPressed: _isUploadLoading ? null : _pickImages,
                   child: _isUploadLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text('图片'),
