@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 import '../services/github.dart';
 import '../services/image_processing.dart';
 import '../services/music.dart';
+import '../services/video.dart';
 import 'dart:io';
 import 'dart:math';
 
@@ -21,6 +22,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   bool _isLoading = false;
   bool _isUploadLoading = false;
   bool _isMusicLoading = false;
+  bool _isVideoLoading = false;
   List<String> _labels = [];
   String _selectedLabel = 'note';
 
@@ -74,6 +76,33 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     }
   }
 
+  Future<void> _fetchVideoCardDataAndInsertToMarkdown(String input) async {
+    if (_isVideoLoading) return;
+    setState(() {
+      _isVideoLoading = true;
+    });
+    final videoService = VideoCardService();
+    // 检查输入内容是否包含域名
+    final bvPattern = RegExp(r'/\b(BV\w+)\b'); // 捕获以 BV 开头的 ID
+    final match = bvPattern.firstMatch(input);
+
+    // 如果匹配到域名并提取出 ID
+    if (match != null) {
+      input = match.group(1)!; // 获取正则匹配到的第一个分组，即 ID
+    }
+    try {
+      print(input);
+      final cardData = await videoService.fetchVideoCardData(input);
+      _insertTextToMarkdown('\n$cardData');
+    } catch (error) {
+      _showErrorMessage('Failed to load video card data');
+    } finally {
+      setState(() {
+        _isVideoLoading = false;
+      });
+    }
+  }
+
   Future<void> _showMusicInputDialog() async {
     final TextEditingController idController = TextEditingController();
     return showDialog(
@@ -98,6 +127,37 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                   final id = idController.text;
                   Navigator.of(context).pop();
                   _fetchMusicCardDataAndInsertToMarkdown(id);
+                },
+              ),
+            ],
+          );
+        });
+  }
+
+  Future<void> _showVideoInputDialog() async {
+    final TextEditingController idController = TextEditingController();
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('b站视频卡片'),
+            content: TextField(
+              controller: idController,
+              decoration: const InputDecoration(hintText: '输入BVID'),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('取消'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('确认'),
+                onPressed: () {
+                  final id = idController.text;
+                  Navigator.of(context).pop();
+                  _fetchVideoCardDataAndInsertToMarkdown(id);
                 },
               ),
             ],
@@ -265,6 +325,14 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                ElevatedButton(
+                  onPressed: _isVideoLoading
+                      ? null
+                      : _showVideoInputDialog, // 显示输入ID的弹框
+                  child: _isVideoLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('视频'),
+                ),
                 ElevatedButton(
                   onPressed: _isMusicLoading
                       ? null
