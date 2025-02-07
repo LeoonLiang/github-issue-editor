@@ -3,9 +3,9 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import '../services/github.dart';
-import '../services/image_processing.dart';
 import '../services/music.dart';
 import '../services/video.dart';
+import '../services/ossService.dart';
 import 'dart:io';
 import 'dart:math';
 
@@ -18,13 +18,13 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   final quill.QuillController _controller = quill.QuillController.basic();
   final TextEditingController _titleController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-  final imageProcessing = ImageProcessing();
   bool _isLoading = false;
   bool _isUploadLoading = false;
   bool _isMusicLoading = false;
   bool _isVideoLoading = false;
   List<String> _labels = [];
   String _selectedLabel = 'note';
+  List<String> _uploadedImages = [];  // 存储上传的图片 URL
 
   void initState() {
     super.initState();
@@ -186,7 +186,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         _isUploadLoading = true;
       });
 
-      final githubService = GitHubService();
+      final ossService = OssService();
 
       for (final image in images) {
         try {
@@ -196,17 +196,11 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
           final originalFileName = randomStr + originalExtension;
 
           // Upload original image
-          await githubService.uploadImageToGitHub(
+          await ossService.uploadFileToS3(
               originalFile.path, 'img/$originalFileName');
 
-          // Convert to WebP and upload
-          final webpFile = await imageProcessing.convertToWebP(originalFile);
-          final webpExtension = path.extension(webpFile.path);
-          final webpFileName = randomStr + originalExtension + webpExtension;
-          final webpImageUrl = await githubService.uploadImageToGitHub(
-              webpFile.path, 'img/$webpFileName');
 
-          final imageUrl = webpImageUrl; // Choose WebP format URL
+          final imageUrl = 'https://bitiful.leoon.cn/img/${originalFileName}'; // Choose WebP format URL
 
           // Insert image link into Markdown
           final imageMarkdown = '\n![image]($imageUrl)\n';
@@ -217,6 +211,10 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
               imageMarkdown,
               TextSelection.collapsed(
                   offset: cursorPosition + imageMarkdown.length));
+          // 将图片 URL 添加到数组中
+          setState(() {
+            _uploadedImages.add('${imageUrl}?fmt=webp&q=20&w=100');
+          });
         } catch (error) {
           _showErrorMessage('图片上传出错');
         }
@@ -243,6 +241,9 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
       _showSuccessMessage();
       _controller.clear(); // 清空编辑器内容
       _titleController.clear();
+      setState(() {
+        _uploadedImages.clear(); // 清空已上传的图片列表
+      });
     } catch (error) {
       // 处理错误
       _showErrorMessage('提交失败，请重试');
@@ -282,14 +283,6 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
             ),
             const SizedBox(height: 8.0), // 添加间距
 
-            // 工具栏
-            // Container(
-            //   child: quill.QuillSimpleToolbar(
-            //     controller: _controller,
-            //     configurations: const quill.QuillSimpleToolbarConfigurations(),
-            //   ),
-            // ),
-            // const SizedBox(height: 8.0), // 添加间距
 
             // 编辑器
             Container(
@@ -355,6 +348,28 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                 ),
               ],
             ),
+            // 展示已上传的图片
+            if (_uploadedImages.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '已上传的图片：',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0, // 图片间的水平间距
+                    runSpacing: 8.0, // 图片行间的垂直间距
+                    children: _uploadedImages.map((imageUrl) {
+                      return SizedBox(
+                        width: MediaQuery.of(context).size.width / 3 - 16, // 每行 3 个图片
+                        child: Image.network(imageUrl, fit: BoxFit.cover), // 图片适应容器大小
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
