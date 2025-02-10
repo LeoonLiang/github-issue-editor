@@ -42,3 +42,13 @@ android {
 flutter {
     source = "../.."
 }
+
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+        def appName = "blog-editor" // 你的 APP 名称
+        def versionName = variant.versionName
+        def versionCode = variant.versionCode
+        def newApkName = "${appName}_v${versionName}.apk"
+        outputFileName = newApkName
+    }
+}

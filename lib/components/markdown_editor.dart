@@ -8,6 +8,9 @@ import '../services/video.dart';
 import '../services/ossService.dart';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'package:motion_photos/motion_photos.dart';
+import 'package:path_provider/path_provider.dart';
 
 class MarkdownEditor extends StatefulWidget {
   @override
@@ -18,13 +21,14 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   final quill.QuillController _controller = quill.QuillController.basic();
   final TextEditingController _titleController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  late MotionPhotos motionPhotos;
   bool _isLoading = false;
   bool _isUploadLoading = false;
   bool _isMusicLoading = false;
   bool _isVideoLoading = false;
   List<String> _labels = [];
   String _selectedLabel = 'note';
-  List<String> _uploadedImages = [];  // 存储上传的图片 URL
+  List<String> _uploadedImages = []; // 存储上传的图片 URL
 
   void initState() {
     super.initState();
@@ -165,6 +169,36 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         });
   }
 
+  Future<File?> extractStillImage(
+      String originalPath, VideoIndex videoIndex) async {
+    try {
+      // 读取原始文件的所有字节
+      File originalFile = File(originalPath);
+      Uint8List originalBytes = await originalFile.readAsBytes();
+
+      // 截取 JPEG 部分（去掉视频数据）
+      int imageDataLength = videoIndex!.start; // Motion Photo 视频索引起始位置
+      Uint8List imageBytes = originalBytes.sublist(0, imageDataLength);
+
+      // 生成新图片文件路径
+      Directory tempDir = await getTemporaryDirectory();
+      String newImagePath = '${tempDir.path}/extracted_image.jpg';
+
+      // 保存 JPEG 数据到新文件
+      File newImageFile = File(newImagePath);
+      await newImageFile.writeAsBytes(imageBytes);
+      // **获取文件大小**
+      int imageSize = await newImageFile.length(); // 以字节 (bytes) 计算
+      double imageSizeKB = imageSize / 1024; // 转换为 KB
+      double imageSizeMB = imageSizeKB / 1024; // 转换为 MB
+      print('图片大小: ${imageSizeMB.toStringAsFixed(2)}MB');
+      return newImageFile;
+    } catch (e) {
+      print('Error extracting still image: $e');
+      return null;
+    }
+  }
+
   // 生成指定长度的随机字符串
   String _generateRandomString(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -178,51 +212,82 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   Future<void> _pickImages() async {
     if (_isUploadLoading) return;
 
-    // Select multiple images
     final List<XFile>? images = await _picker.pickMultiImage();
+    if (images == null || images.isEmpty) return;
 
-    if (images != null && images.isNotEmpty) {
-      setState(() {
-        _isUploadLoading = true;
-      });
+    setState(() => _isUploadLoading = true);
 
-      final ossService = OssService();
+    final ossService = OssService();
+    final List<Future<void>> uploadTasks = [];
 
-      for (final image in images) {
-        try {
-          final originalFile = File(image.path);
-          final randomStr = _generateRandomString(12);
-          final originalExtension = path.extension(originalFile.path);
-          final originalFileName = randomStr + originalExtension;
-
-          // Upload original image
-          await ossService.uploadFileToS3(
-              originalFile.path, 'img/$originalFileName');
-
-
-          final imageUrl = 'https://bitiful.leoon.cn/img/${originalFileName}'; // Choose WebP format URL
-
-          // Insert image link into Markdown
-          final imageMarkdown = '\n![image]($imageUrl)\n';
-          final int cursorPosition = _controller.selection.baseOffset;
-          _controller.replaceText(
-              cursorPosition,
-              0,
-              imageMarkdown,
-              TextSelection.collapsed(
-                  offset: cursorPosition + imageMarkdown.length));
-          // 将图片 URL 添加到数组中
-          setState(() {
-            _uploadedImages.add('${imageUrl}?fmt=webp&q=20&w=100');
-          });
-        } catch (error) {
-          _showErrorMessage('图片上传出错');
-        }
-      }
-      setState(() {
-        _isUploadLoading = false;
-      });
+    for (final image in images) {
+      uploadTasks.add(_processImage(image, ossService));
     }
+
+    await Future.wait(uploadTasks);
+    setState(() => _isUploadLoading = false);
+  }
+
+  Future<void> _processImage(XFile image, OssService ossService) async {
+    try {
+      final motionPhotos = MotionPhotos(image.path);
+      final bool isMotionPhoto = await motionPhotos.isMotionPhoto();
+
+      String imageUrl = '', videoUrl = '';
+      final randomStr = _generateRandomString(12);
+      print('是动图吗: $isMotionPhoto');
+      if (isMotionPhoto) {
+        VideoIndex? videoIndex = await motionPhotos.getMotionVideoIndex();
+        File? motionImageFile =
+            await extractStillImage(image.path, videoIndex!);
+        File motionVideoFile = await motionPhotos
+            .getMotionVideoFile(await getTemporaryDirectory());
+        print('motionVideoFile: ${motionVideoFile.path}');
+
+        if (motionImageFile != null) {
+          await ossService.uploadFileToS3(
+              motionImageFile.path, 'img/$randomStr.jpg');
+          imageUrl = 'https://bitiful.leoon.cn/img/$randomStr.jpg';
+        }
+
+        await ossService.uploadFileToS3(
+            motionVideoFile.path, 'video/$randomStr.mp4');
+        videoUrl = 'https://bitiful.leoon.cn/video/$randomStr.mp4';
+      } else {
+        final originalFile = File(image.path);
+        final originalExtension = path.extension(originalFile.path);
+        final originalFileName = '$randomStr$originalExtension';
+
+        await ossService.uploadFileToS3(
+            originalFile.path, 'img/$originalFileName');
+        imageUrl = 'https://bitiful.leoon.cn/img/$originalFileName';
+      }
+
+      _insertImageMarkdown(imageUrl, videoUrl);
+      _addUploadedImage(imageUrl);
+    } catch (error) {
+      _showErrorMessage('图片上传出错');
+    }
+  }
+
+  void _insertImageMarkdown(String imageUrl, String videoUrl) {
+    final imageMarkdown = videoUrl.isNotEmpty
+        ? '\n![image]($imageUrl)($videoUrl)\n'
+        : '\n![image]($imageUrl)\n';
+
+    final int cursorPosition = _controller.selection.baseOffset;
+    _controller.replaceText(
+      cursorPosition,
+      0,
+      imageMarkdown,
+      TextSelection.collapsed(offset: cursorPosition + imageMarkdown.length),
+    );
+  }
+
+  void _addUploadedImage(String imageUrl) {
+    setState(() {
+      _uploadedImages.add('$imageUrl?fmt=webp&q=20&w=100');
+    });
   }
 
   Future<void> _submitMarkdown() async {
@@ -282,7 +347,6 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
               ),
             ),
             const SizedBox(height: 8.0), // 添加间距
-
 
             // 编辑器
             Container(
@@ -363,8 +427,10 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                     runSpacing: 8.0, // 图片行间的垂直间距
                     children: _uploadedImages.map((imageUrl) {
                       return SizedBox(
-                        width: MediaQuery.of(context).size.width / 3 - 16, // 每行 3 个图片
-                        child: Image.network(imageUrl, fit: BoxFit.cover), // 图片适应容器大小
+                        width: MediaQuery.of(context).size.width / 3 -
+                            16, // 每行 3 个图片
+                        child: Image.network(imageUrl,
+                            fit: BoxFit.cover), // 图片适应容器大小
                       );
                     }).toList(),
                   ),
