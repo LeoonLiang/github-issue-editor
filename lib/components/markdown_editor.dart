@@ -169,8 +169,8 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         });
   }
 
-  Future<File?> extractStillImage(
-      String originalPath, VideoIndex videoIndex) async {
+  Future<File?> extractStillImage(String originalPath, VideoIndex videoIndex,
+      {String? outputFileName}) async {
     try {
       // 读取原始文件的所有字节
       File originalFile = File(originalPath);
@@ -182,7 +182,8 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
       // 生成新图片文件路径
       Directory tempDir = await getTemporaryDirectory();
-      String newImagePath = '${tempDir.path}/extracted_image.jpg';
+      String safeFileName = outputFileName ?? 'extracted_image.jpg';
+      String newImagePath = path.join(tempDir.path, safeFileName);
 
       // 保存 JPEG 数据到新文件
       File newImageFile = File(newImagePath);
@@ -238,10 +239,16 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
       print('是动图吗: $isMotionPhoto');
       if (isMotionPhoto) {
         VideoIndex? videoIndex = await motionPhotos.getMotionVideoIndex();
-        File? motionImageFile =
-            await extractStillImage(image.path, videoIndex!);
-        File motionVideoFile = await motionPhotos
-            .getMotionVideoFile(await getTemporaryDirectory());
+        File? motionImageFile = await extractStillImage(
+          image.path,
+          videoIndex!,
+          outputFileName: 'motion_image_$randomStr.jpg',
+        );
+        final tempDir = await getTemporaryDirectory();
+        final motionVideoFile = await motionPhotos.getMotionVideoFile(
+          tempDir,
+          fileName: 'motion_video_$randomStr.mp4',
+        );
         print('motionVideoFile: ${motionVideoFile.path}');
 
         if (motionImageFile != null) {
