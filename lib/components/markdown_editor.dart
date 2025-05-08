@@ -17,6 +17,13 @@ class MarkdownEditor extends StatefulWidget {
   _MarkdownEditorState createState() => _MarkdownEditorState();
 }
 
+class _UploadResult {
+  final String imageUrl;
+  final String videoUrl;
+
+  _UploadResult(this.imageUrl, this.videoUrl);
+}
+
 class _MarkdownEditorState extends State<MarkdownEditor> {
   final quill.QuillController _controller = quill.QuillController.basic();
   final TextEditingController _titleController = TextEditingController();
@@ -219,62 +226,72 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     setState(() => _isUploadLoading = true);
 
     final ossService = OssService();
-    final List<Future<void>> uploadTasks = [];
+    final List<_UploadResult?> results = List.filled(images.length, null);
 
-    for (final image in images) {
-      uploadTasks.add(_processImage(image, ossService));
+    await Future.wait(
+      List.generate(images.length, (i) async {
+        final image = images[i];
+        try {
+          final result = await _processImageAndReturnUrls(image, ossService);
+          results[i] = result;
+        } catch (_) {
+          _showErrorMessage('第 ${i + 1} 张图片上传失败');
+        }
+      }),
+    );
+
+    // 插入 markdown，保持顺序
+    for (final result in results) {
+      if (result != null) {
+        _insertImageMarkdown(result.imageUrl, result.videoUrl);
+        _addUploadedImage(result.imageUrl);
+      }
     }
 
-    await Future.wait(uploadTasks);
     setState(() => _isUploadLoading = false);
   }
 
-  Future<void> _processImage(XFile image, OssService ossService) async {
-    try {
-      final motionPhotos = MotionPhotos(image.path);
-      final bool isMotionPhoto = await motionPhotos.isMotionPhoto();
+  Future<_UploadResult> _processImageAndReturnUrls(
+      XFile image, OssService ossService) async {
+    final motionPhotos = MotionPhotos(image.path);
+    final bool isMotionPhoto = await motionPhotos.isMotionPhoto();
 
-      String imageUrl = '', videoUrl = '';
-      final randomStr = _generateRandomString(12);
-      print('是动图吗: $isMotionPhoto');
-      if (isMotionPhoto) {
-        VideoIndex? videoIndex = await motionPhotos.getMotionVideoIndex();
-        File? motionImageFile = await extractStillImage(
-          image.path,
-          videoIndex!,
-          outputFileName: 'motion_image_$randomStr.jpg',
-        );
-        final tempDir = await getTemporaryDirectory();
-        final motionVideoFile = await motionPhotos.getMotionVideoFile(
-          tempDir,
-          fileName: 'motion_video_$randomStr.mp4',
-        );
-        print('motionVideoFile: ${motionVideoFile.path}');
+    String imageUrl = '', videoUrl = '';
+    final randomStr = _generateRandomString(12);
 
-        if (motionImageFile != null) {
-          await ossService.uploadFileToS3(
-              motionImageFile.path, 'img/$randomStr.jpg');
-          imageUrl = 'https://bitiful.leoon.cn/img/$randomStr.jpg';
-        }
+    if (isMotionPhoto) {
+      VideoIndex? videoIndex = await motionPhotos.getMotionVideoIndex();
+      File? motionImageFile = await extractStillImage(
+        image.path,
+        videoIndex!,
+        outputFileName: 'motion_image_$randomStr.jpg',
+      );
+      final tempDir = await getTemporaryDirectory();
+      final motionVideoFile = await motionPhotos.getMotionVideoFile(
+        tempDir,
+        fileName: 'motion_video_$randomStr.mp4',
+      );
 
+      if (motionImageFile != null) {
         await ossService.uploadFileToS3(
-            motionVideoFile.path, 'video/$randomStr.mp4');
-        videoUrl = 'https://bitiful.leoon.cn/video/$randomStr.mp4';
-      } else {
-        final originalFile = File(image.path);
-        final originalExtension = path.extension(originalFile.path);
-        final originalFileName = '$randomStr$originalExtension';
-
-        await ossService.uploadFileToS3(
-            originalFile.path, 'img/$originalFileName');
-        imageUrl = 'https://bitiful.leoon.cn/img/$originalFileName';
+            motionImageFile.path, 'img/$randomStr.jpg');
+        imageUrl = 'https://bitiful.leoon.cn/img/$randomStr.jpg';
       }
 
-      _insertImageMarkdown(imageUrl, videoUrl);
-      _addUploadedImage(imageUrl);
-    } catch (error) {
-      _showErrorMessage('图片上传出错');
+      await ossService.uploadFileToS3(
+          motionVideoFile.path, 'video/$randomStr.mp4');
+      videoUrl = 'https://bitiful.leoon.cn/video/$randomStr.mp4';
+    } else {
+      final originalFile = File(image.path);
+      final originalExtension = path.extension(originalFile.path);
+      final originalFileName = '$randomStr$originalExtension';
+
+      await ossService.uploadFileToS3(
+          originalFile.path, 'img/$originalFileName');
+      imageUrl = 'https://bitiful.leoon.cn/img/$originalFileName';
     }
+
+    return _UploadResult(imageUrl, videoUrl);
   }
 
   void _insertImageMarkdown(String imageUrl, String videoUrl) {
