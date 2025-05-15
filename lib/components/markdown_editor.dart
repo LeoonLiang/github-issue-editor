@@ -296,7 +296,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
   void _insertImageMarkdown(String imageUrl, String videoUrl) {
     final imageMarkdown = videoUrl.isNotEmpty
-        ? '\n![image]($imageUrl)($videoUrl)\n'
+        ? '\n![image]($imageUrl){liveVideo="$videoUrl"}\n'
         : '\n![image]($imageUrl)\n';
 
     final int cursorPosition = _controller.selection.baseOffset;
