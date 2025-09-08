@@ -3,17 +3,19 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:thumbhash/thumbhash.dart' as Thumbhash;
+import 'package:motion_photos/motion_photos.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:reorderables/reorderables.dart';
+import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
-import '../services/github.dart';
-import '../services/music.dart';
-import '../services/video.dart';
-import '../services/ossService.dart';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:convert';
-import 'package:motion_photos/motion_photos.dart';
-import 'package:path_provider/path_provider.dart';
+import '../services/github.dart';
+import '../services/music.dart';
+import '../services/video.dart';
+import '../services/ossService.dart';
 
 class MarkdownEditor extends StatefulWidget {
   @override
@@ -44,9 +46,11 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   bool _isUploadLoading = false;
   bool _isMusicLoading = false;
   bool _isVideoLoading = false;
+  bool _useGrid = true; // 是否使用九宫格
   List<String> _labels = [];
   String _selectedLabel = 'note';
   List<String> _uploadedImages = []; // 存储上传的图片 URL
+  List<_UploadResult> _uploadedImageResults = []; // 上传结果顺序列表
 
   void initState() {
     super.initState();
@@ -258,7 +262,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     for (final result in results) {
       if (result != null) {
         _insertImageMarkdown(result);
-        _addUploadedImage(result.imageUrl);
+        _addUploadedImageResult(result);
       }
     }
 
@@ -313,34 +317,38 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
     if (finalImageFile != null) {
       final bytes = await finalImageFile.readAsBytes();
+      final decodedImage = img.decodeImage(bytes);
+      if (decodedImage != null) {
+        width = decodedImage.width;
+        height = decodedImage.height;
+        // 生成缩略图用于 ThumbHash（最大 100x100，等比缩放）
+        final thumbWidth = width > height ? 100 : (100 * width ~/ height);
+        final thumbHeight = height > width ? 100 : (100 * height ~/ width);
+        final thumbnail = img.copyResize(
+          decodedImage,
+          width: thumbWidth,
+          height: thumbHeight,
+        );
 
-      // 用 Flutter 自带的 decode API 拿宽高
-      final codec = await ui.instantiateImageCodec(
-        bytes,
-        targetWidth: 100,
-        targetHeight: 100,
-      );
-      final frame = await codec.getNextFrame();
-      final ui.Image img = frame.image;
-      width = img.width;
-      height = img.height;
+        // RGBA 数据
+        final rgbaBytes =
+            Uint8List.fromList(thumbnail.getBytes(format: img.Format.rgba));
 
-      // RGBA 数据
-      final byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (byteData != null) {
-        final rgbaBytes = byteData.buffer.asUint8List();
-        final thumbhashBytes =
-            Thumbhash.rgbaToThumbHash(width, height, rgbaBytes);
+        final thumbhashBytes = Thumbhash.rgbaToThumbHash(
+          thumbnail.width,
+          thumbnail.height,
+          rgbaBytes,
+        );
+
         thumbhash = base64.encode(thumbhashBytes);
       }
     }
-
     return _UploadResult(imageUrl, videoUrl, width, height, thumbhash);
   }
 
   void _insertImageMarkdown(_UploadResult result) {
     final imageMarkdown = result.videoUrl.isNotEmpty
-        ? '\n![image](${result.imageUrl}){liveVideo="${result.videoUrl}" width=${result.width} height=${result.height} thumbhash=${result.thumbhash}}\n'
+        ? '\n![image](${result.imageUrl}){liveVideo="${result.videoUrl}" width=${result.width} height=${result.height} thumbhash="${result.thumbhash}"}\n'
         : '\n![image](${result.imageUrl}){width=${result.width} height=${result.height} thumbhash="${result.thumbhash}"}\n';
 
     final int cursorPosition = _controller.selection.baseOffset;
@@ -352,38 +360,59 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     );
   }
 
-  void _addUploadedImage(String imageUrl) {
+  void _addUploadedImageResult(_UploadResult result) {
     setState(() {
-      _uploadedImages.add('$imageUrl?fmt=webp&q=20&w=100');
+      _uploadedImageResults.add(result); // 顺序用
+      _uploadedImages.add('${result.imageUrl}?fmt=webp&q=20&w=100'); // 显示用
     });
   }
 
   Future<void> _submitMarkdown() async {
-    // 如果正在加载，直接返回，避免重复提交
     if (_isLoading) return;
-    final markdownText = _controller.document.toPlainText();
+    setState(() => _isLoading = true);
+
     final githubService = GitHubService();
     final title = _titleController.text;
 
+    // 原编辑器内容
+    String markdownText = _controller.document.toPlainText();
+
+    if (_useGrid && _uploadedImageResults.isNotEmpty) {
+      // 1️⃣ 清掉原 Markdown 中的图片 Markdown
+      // 这里匹配 Markdown 图片语法 ![xxx](url) 或带 {} 的情况
+      final imageRegex = RegExp(r'!\[.*?\]\(.*?\)(\{.*?\})?');
+      markdownText = markdownText.replaceAll(imageRegex, '');
+
+      // 2️⃣ 在末尾追加九宫格图片
+      final gridMarkdown = _uploadedImageResults.map((img) {
+        return img.videoUrl.isNotEmpty
+            ? '\n![image](${img.imageUrl}){liveVideo="${img.videoUrl}" width=${img.width} height=${img.height} thumbhash="${img.thumbhash}"}\n'
+            : '\n![image](${img.imageUrl}){width=${img.width} height=${img.height} thumbhash=${img.thumbhash}}\n';
+      }).join();
+
+      markdownText = markdownText.trim() + '\n' + gridMarkdown;
+    }
+
     try {
-      // 在这里执行提交到 GitHub 的逻辑
+      print('提交的 Markdown:\n$markdownText');
       await githubService.createGitHubIssue(
           title, markdownText, _selectedLabel);
-
-      // 提交成功后
       _showSuccessMessage();
-      _controller.clear(); // 清空编辑器内容
+
+      // 重置状态
+      _controller.clear();
       _titleController.clear();
       setState(() {
-        _uploadedImages.clear(); // 清空已上传的图片列表
+        _uploadedImages.clear();
+        _uploadedImageResults.clear();
       });
-    } catch (error) {
-      // 处理错误
+    } catch (e, stackTrace) {
       _showErrorMessage('提交失败，请重试');
+      print('提交失败，请重试');
+      print(stackTrace);
+      print(e);
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -480,6 +509,15 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                 ),
               ],
             ),
+            CheckboxListTile(
+              title: Text('使用九宫格展示图片'),
+              value: _useGrid,
+              onChanged: (val) {
+                setState(() {
+                  _useGrid = val ?? false;
+                });
+              },
+            ),
             // 展示已上传的图片
             if (_uploadedImages.isNotEmpty)
               Column(
@@ -490,18 +528,28 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8.0, // 图片间的水平间距
-                    runSpacing: 8.0, // 图片行间的垂直间距
+                  ReorderableWrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        final item = _uploadedImageResults.removeAt(oldIndex);
+                        _uploadedImageResults.insert(newIndex, item);
+
+                        // 同步显示用的 _uploadedImages
+                        _uploadedImages = _uploadedImageResults
+                            .map((e) => '${e.imageUrl}?fmt=webp&q=20&w=100')
+                            .toList();
+                      });
+                    },
                     children: _uploadedImages.map((imageUrl) {
-                      return SizedBox(
-                        width: MediaQuery.of(context).size.width / 3 -
-                            16, // 每行 3 个图片
-                        child: Image.network(imageUrl,
-                            fit: BoxFit.cover), // 图片适应容器大小
+                      return Container(
+                        key: ValueKey(imageUrl),
+                        width: MediaQuery.of(context).size.width / 3 - 16,
+                        child: Image.network(imageUrl, fit: BoxFit.cover),
                       );
                     }).toList(),
-                  ),
+                  )
                 ],
               ),
           ],
