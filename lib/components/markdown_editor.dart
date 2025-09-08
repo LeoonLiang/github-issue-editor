@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:thumbhash/thumbhash.dart' as Thumbhash;
+import 'dart:ui' as ui;
 import '../services/github.dart';
 import '../services/music.dart';
 import '../services/video.dart';
@@ -9,6 +11,7 @@ import '../services/ossService.dart';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:motion_photos/motion_photos.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -20,8 +23,16 @@ class MarkdownEditor extends StatefulWidget {
 class _UploadResult {
   final String imageUrl;
   final String videoUrl;
-
-  _UploadResult(this.imageUrl, this.videoUrl);
+  final int width;
+  final int height;
+  final String thumbhash;
+  _UploadResult(
+    this.imageUrl,
+    this.videoUrl,
+    this.width,
+    this.height,
+    this.thumbhash,
+  );
 }
 
 class _MarkdownEditorState extends State<MarkdownEditor> {
@@ -234,8 +245,11 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         try {
           final result = await _processImageAndReturnUrls(image, ossService);
           results[i] = result;
-        } catch (_) {
+        } catch (e, stackTrace) {
+          // 异常 e 和堆栈信息 stackTrace 都打印出来
           _showErrorMessage('第 ${i + 1} 张图片上传失败');
+          print('第 ${i + 1} 张图片上传异常: $e');
+          print(stackTrace);
         }
       }),
     );
@@ -243,7 +257,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     // 插入 markdown，保持顺序
     for (final result in results) {
       if (result != null) {
-        _insertImageMarkdown(result.imageUrl, result.videoUrl);
+        _insertImageMarkdown(result);
         _addUploadedImage(result.imageUrl);
       }
     }
@@ -258,6 +272,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
     String imageUrl = '', videoUrl = '';
     final randomStr = _generateRandomString(12);
+    File? finalImageFile;
 
     if (isMotionPhoto) {
       VideoIndex? videoIndex = await motionPhotos.getMotionVideoIndex();
@@ -276,6 +291,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
         await ossService.uploadFileToS3(
             motionImageFile.path, 'img/$randomStr.jpg');
         imageUrl = 'https://bitiful.leoon.cn/img/$randomStr.jpg';
+        finalImageFile = motionImageFile;
       }
 
       await ossService.uploadFileToS3(
@@ -289,15 +305,43 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
       await ossService.uploadFileToS3(
           originalFile.path, 'img/$originalFileName');
       imageUrl = 'https://bitiful.leoon.cn/img/$originalFileName';
+      finalImageFile = originalFile;
     }
 
-    return _UploadResult(imageUrl, videoUrl);
+    int width = 0, height = 0;
+    String thumbhash = '';
+
+    if (finalImageFile != null) {
+      final bytes = await finalImageFile.readAsBytes();
+
+      // 用 Flutter 自带的 decode API 拿宽高
+      final codec = await ui.instantiateImageCodec(
+        bytes,
+        targetWidth: 100,
+        targetHeight: 100,
+      );
+      final frame = await codec.getNextFrame();
+      final ui.Image img = frame.image;
+      width = img.width;
+      height = img.height;
+
+      // RGBA 数据
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteData != null) {
+        final rgbaBytes = byteData.buffer.asUint8List();
+        final thumbhashBytes =
+            Thumbhash.rgbaToThumbHash(width, height, rgbaBytes);
+        thumbhash = base64.encode(thumbhashBytes);
+      }
+    }
+
+    return _UploadResult(imageUrl, videoUrl, width, height, thumbhash);
   }
 
-  void _insertImageMarkdown(String imageUrl, String videoUrl) {
-    final imageMarkdown = videoUrl.isNotEmpty
-        ? '\n![image]($imageUrl){liveVideo="$videoUrl"}\n'
-        : '\n![image]($imageUrl)\n';
+  void _insertImageMarkdown(_UploadResult result) {
+    final imageMarkdown = result.videoUrl.isNotEmpty
+        ? '\n![image](${result.imageUrl}){liveVideo="${result.videoUrl}" width=${result.width} height=${result.height} thumbhash=${result.thumbhash}}\n'
+        : '\n![image](${result.imageUrl}){width=${result.width} height=${result.height} thumbhash="${result.thumbhash}"}\n';
 
     final int cursorPosition = _controller.selection.baseOffset;
     _controller.replaceText(
