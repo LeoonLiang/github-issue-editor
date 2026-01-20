@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:thumbhash/thumbhash.dart' as Thumbhash;
@@ -16,10 +17,12 @@ import '../services/github.dart';
 import '../services/music.dart';
 import '../services/video.dart';
 import '../services/ossService.dart';
+import '../providers/config_provider.dart';
+import '../providers/github_provider.dart';
 
-class MarkdownEditor extends StatefulWidget {
+class MarkdownEditor extends ConsumerStatefulWidget {
   @override
-  _MarkdownEditorState createState() => _MarkdownEditorState();
+  ConsumerState<MarkdownEditor> createState() => _MarkdownEditorState();
 }
 
 class _UploadResult {
@@ -37,7 +40,7 @@ class _UploadResult {
   );
 }
 
-class _MarkdownEditorState extends State<MarkdownEditor> {
+class _MarkdownEditorState extends ConsumerState<MarkdownEditor> {
   final quill.QuillController _controller = quill.QuillController.basic();
   final TextEditingController _titleController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
@@ -54,11 +57,23 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 
   void initState() {
     super.initState();
-    _fetchLabels();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_labels.isEmpty) {
+      _fetchLabels();
+    }
   }
 
   Future<void> _fetchLabels() async {
-    final githubService = GitHubService();
+    final githubService = ref.read(githubServiceProvider);
+    if (githubService == null) {
+      _showErrorMessage('请先配置 GitHub');
+      return;
+    }
+
     try {
       final labels = await githubService.fetchGitHubLabels();
       setState(() {
@@ -238,6 +253,14 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     final List<XFile>? images = await _picker.pickMultiImage();
     if (images == null || images.isEmpty) return;
 
+    // 获取启用的 OSS 配置
+    final enabledOssList = ref.read(configProvider).enabledOSSList;
+
+    if (enabledOssList.isEmpty) {
+      _showErrorMessage('请先在设置中配置并启用 OSS');
+      return;
+    }
+
     setState(() => _isUploadLoading = true);
 
     final ossService = OssService();
@@ -247,7 +270,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
       List.generate(images.length, (i) async {
         final image = images[i];
         try {
-          final result = await _processImageAndReturnUrls(image, ossService);
+          final result = await _processImageAndReturnUrls(image, ossService, enabledOssList);
           results[i] = result;
         } catch (e, stackTrace) {
           // 异常 e 和堆栈信息 stackTrace 都打印出来
@@ -270,7 +293,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   }
 
   Future<_UploadResult> _processImageAndReturnUrls(
-      XFile image, OssService ossService) async {
+      XFile image, OssService ossService, List enabledOssList) async {
     final motionPhotos = MotionPhotos(image.path);
     final bool isMotionPhoto = await motionPhotos.isMotionPhoto();
 
@@ -292,23 +315,33 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
       );
 
       if (motionImageFile != null) {
-        await ossService.uploadFileToS3(
-            motionImageFile.path, 'img/$randomStr.jpg');
-        imageUrl = 'https://bitiful.leoon.cn/img/$randomStr.jpg';
+        final imageUrls = await ossService.uploadFileToS3(
+          motionImageFile.path,
+          'img/$randomStr.jpg',
+          enabledOssList,
+        );
+        imageUrl = imageUrls.values.first;
         finalImageFile = motionImageFile;
       }
 
-      await ossService.uploadFileToS3(
-          motionVideoFile.path, 'video/$randomStr.mp4');
-      videoUrl = 'https://bitiful.leoon.cn/video/$randomStr.mp4';
+      final videoUrls = await ossService.uploadFileToS3(
+        motionVideoFile.path,
+        'video/$randomStr.mp4',
+        enabledOssList,
+        fileType: 'video/mp4',
+      );
+      videoUrl = videoUrls.values.first;
     } else {
       final originalFile = File(image.path);
       final originalExtension = path.extension(originalFile.path);
       final originalFileName = '$randomStr$originalExtension';
 
-      await ossService.uploadFileToS3(
-          originalFile.path, 'img/$originalFileName');
-      imageUrl = 'https://bitiful.leoon.cn/img/$originalFileName';
+      final imageUrls = await ossService.uploadFileToS3(
+        originalFile.path,
+        'img/$originalFileName',
+        enabledOssList,
+      );
+      imageUrl = imageUrls.values.first;
       finalImageFile = originalFile;
     }
 
@@ -371,7 +404,13 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
-    final githubService = GitHubService();
+    final githubService = ref.read(githubServiceProvider);
+    if (githubService == null) {
+      _showErrorMessage('请先配置 GitHub');
+      setState(() => _isLoading = false);
+      return;
+    }
+
     final title = _titleController.text;
 
     // 原编辑器内容

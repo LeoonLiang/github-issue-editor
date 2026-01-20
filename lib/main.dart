@@ -1,22 +1,49 @@
 import 'package:flutter/material.dart';
-import 'components/markdown_editor.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/main_screen.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Markdown Editor',
+      title: 'GitHub Issue Editor',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.red,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFEC4141), // 网易云红色
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
+        cardTheme: CardTheme(
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFFEC4141),
+          foregroundColor: Colors.white,
+        ),
       ),
-      home: Scaffold(
-        appBar: AppBar(title: Text('Markdown Editor')),
-        body: MarkdownEditor(),
-      ),
+      home: const MainScreen(),
     );
   }
 }

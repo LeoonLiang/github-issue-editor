@@ -1,7 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" >
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 旧权限模型 (Android <= 12, API <= 32) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- READ_EXTERNAL_STORAGE 不限制版本，参考其他应用配置 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- Android 13+ (API >= 33) 新权限模型 -->
+    <!-- 注意：即使 targetSdk 是 32，在 Android 13/14 设备上运行时也需要这些权限 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!-- Android 14+ (API >= 34) 部分访问功能 -->
+    <!-- 注意：即使 targetSdk 是 32，在 Android 14 设备上运行时也需要这个权限 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+
     <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="flutter_editor"

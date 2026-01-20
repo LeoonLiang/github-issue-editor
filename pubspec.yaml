@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.1.0
+version: 2.0.0
 
 environment:
   sdk: ^3.5.2
@@ -44,6 +44,30 @@ dependencies:
   thumbhash: ^0.1.0+1
   reorderables: ^0.6.0
   image: ^3.2.2  # 降级到 3.x 系列
+
+  # 状态管理
+  flutter_riverpod: ^2.6.1
+
+  # 持久化存储
+  shared_preferences: ^2.3.3
+
+  # 图片缓存和加载优化
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
+
+  # UI 增强
+  photo_view: ^0.15.0  # 图片预览
+  uuid: ^4.5.1  # 生成唯一 ID
+  photo_manager: ^3.5.0  # 相册访问和管理
+  permission_handler: ^11.3.1  # 权限请求（用于旧版存储权限）
+  video_player: ^2.10.1  # 视频播放
+
+  # 工具库
+  path: ^1.9.0
+  html: ^0.15.4
+  file_picker: ^8.1.6  # 文件选择和保存
+  package_info_plus: ^8.0.0  # 获取应用版本信息
+  url_launcher: ^6.3.0  # 打开URL
 
 dev_dependencies:
   flutter_test:
