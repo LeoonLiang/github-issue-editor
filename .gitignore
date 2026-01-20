@@ -44,3 +44,13 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/app/.cxx
+
+# Security: Never commit sensitive files
+*.env
+*.env.local
+*.env.*.local
+**/credentials.json
+**/config.local.dart
+**/secrets.dart
+secrets-replace.txt
+.env.*
