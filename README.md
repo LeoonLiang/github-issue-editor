@@ -1,6 +1,6 @@
 # GitHub Issue Editor
 
-一款采用网易云音乐风格设计的 GitHub Issue 编辑器移动应用，让你以朋友圈的方式管理 GitHub Issues。
+这是一款增删差改 github issue 的 app，如果你是通过 issue 管理博客完整的话 ，他将可以帮助你快速发出图文风格的文章。
 
 ## ✨ 特性
 
@@ -12,25 +12,68 @@
 
 ### 🎨 媒体支持
 - **图片上传** - 支持多图上传至 AWS S3
+- **图片编辑** - 支持编辑已选择的图片（Pro Image Editor）
 - **九宫格展示** - 类朋友圈的图片网格布局
 - **拖拽排序** - 自由调整图片顺序
 - **视频支持** - 上传和预览视频内容
-- **实况照片** - 支持 iOS Live Photos
+- **实况照片** - 支持小米实况照片（编辑时保留原视频）
+  > ⚠️ **注意**：Live Photo 功能目前仅支持小米手机的实况照片，其他品牌手机未经验证
 - **ThumbHash 预览** - 图片加载前显示模糊占位图
 
 ### 💾 实用功能
-- **草稿保存** - 自动保存未发布的内容
+- **草稿保存** - 自动保存文字和已上传图片
 - **版本检查** - 自动检查并提示应用更新
 - **自定义相册** - 内置照片选择器，支持多选和预览
+- **配置导入导出** - 支持配置备份和恢复
 
 ### 🎨 设计风格
-- 采用网易云音乐红白配色方案
+- 采用红白配色方案
 - 简洁现代的 Material Design
 - 流畅的交互动画
 
-## 📸 截图
 
-_待添加应用截图_
+## 📝 输出格式
+
+本应用发布的 GitHub Issue 内容采用增强的 Markdown 格式，包含标题、正文和富媒体信息。
+
+### 文章结构
+
+```markdown
+# 文章标题
+
+这是文章的正文内容，支持完整的 Markdown 语法。
+
+可以包含多段文字、列表、引用等格式。
+
+![image](https://example.com/image1.jpg){width=4096 height=3072 thumbhash="5xgOFYLHqZeKiHePdYZ4dhWCkDAG"}
+
+![image](https://example.com/image2.jpg){liveVideo="https://example.com/video.mp4" width=4096 height=3072 thumbhash="XQgKDYL6mFiTybdFZnipeZPgIAgP"}
+```
+
+### 图片格式说明
+
+图片使用扩展的 Markdown 语法，在标准图片语法后附加元数据：
+
+**普通图片：**
+```markdown
+![image](https://your-cdn.com/img/example1.jpg){width=4096 height=3072 thumbhash="5xgOFYLHqZeKiHePdYZ4dhWCkDAG"}
+```
+- `width` / `height` - 图片原始尺寸
+- `thumbhash` - 图片占位符哈希（用于加载前显示模糊预览）
+
+**Live Photo（实况照片）：**
+```markdown
+![image](https://your-cdn.com/img/example2.jpg){liveVideo="https://your-cdn.com/video/example2.mp4" width=4096 height=3072 thumbhash="XQgKDYL6mFiTybdFZnipeZPgIAgP"}
+```
+- `liveVideo` - 实况视频的 URL（小米实况照片）
+- 其他参数同普通图片
+
+**竖图示例：**
+```markdown
+![image](https://your-cdn.com/img/example3.jpg){width=3072 height=4096 thumbhash="YhgOFQJpiZuH+JinhnR3h3pg+QgW"}
+```
+
+> 💡 **提示**：这些元数据虽然在标准 Markdown 渲染器中不会显示，但可以被支持的博客系统解析，用于优化图片加载体验和实现实况照片播放功能。
 
 ## 🚀 开始使用
 
@@ -130,10 +173,13 @@ lib/
 
 ## 📱 支持平台
 
-- ✅ Android
-- ✅ iOS
-- ⚠️ macOS（部分功能）
+> ⚠️ **重要提示**：本应用目前仅在**小米手机**上进行过完整测试和适配，其他品牌 Android 手机和 iOS 设备可能存在兼容性问题。
+
+- ✅ Android（小米手机已测试）
+- ⚠️ Android（其他品牌未验证）
+- ⚠️ iOS（未充分测试）
 - ❌ Web（图片选择器不支持）
+- ❌ macOS（未适配）
 
 ## 🔄 版本更新
 
@@ -158,6 +204,16 @@ lib/
 
 
 ## 📝 更新日志
+
+### v2.0.1 (2026-01-22)
+- ✨ 新增图片编辑功能，支持编辑已选择的图片
+- ✨ 新增 Live Photo 编辑支持（编辑静态图片时保留原视频）
+- ✨ 新增实时草稿保存（自动保存文字和已上传图片）
+- ✨ 优化配置导入体验（改为弹窗输入，提供格式提示）
+- 🐛 修复草稿加载时图片重复累加的问题
+- 🐛 修复清空草稿时图片未清空的问题
+- 🐛 修复导入配置点击取消时的报错
+- ⚡ 优化发布页面键盘弹出性能
 
 ### v2.0.0 (2026-01-20)
 - ✨ 新增草稿保存功能（自动保存和恢复）

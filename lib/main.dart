@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.red,
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFEC4141), // 网易云红色
+          seedColor: const Color(0xFFEC4141),
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: Colors.white,

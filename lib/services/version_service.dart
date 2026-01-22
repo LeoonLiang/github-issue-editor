@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 /// 版本更新服务
 class VersionService {
-  static const String githubRepo = 'leoonliang/github-issue-editor';
+  static const String githubRepo = 'LeoonLiang/github-issue-editor';
 
   /// 检查是否有新版本
   /// 返回: {hasUpdate: bool, latestVersion: string, downloadUrl: string, releaseNotes: string}
@@ -45,8 +45,11 @@ class VersionService {
       };
     } catch (e) {
       print('Error checking for update: $e');
+      // 返回错误信息，而不是假装没有更新
       return {
         'hasUpdate': false,
+        'hasError': true,
+        'errorMessage': e.toString(),
         'latestVersion': currentVersion,
         'downloadUrl': 'https://github.com/$githubRepo/releases/latest',
         'releaseNotes': '',

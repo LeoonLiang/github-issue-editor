@@ -643,7 +643,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (!mounted) return;
 
-      if (updateInfo['hasUpdate'] == true) {
+      // 检查是否有错误
+      if (updateInfo['hasError'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('检查更新失败: ${updateInfo['errorMessage']}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else if (updateInfo['hasUpdate'] == true) {
         _showUpdateDialog(updateInfo);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

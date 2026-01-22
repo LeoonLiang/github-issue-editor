@@ -13,7 +13,7 @@ import '../services/video.dart';
 import '../widgets/image_grid_widget.dart';
 import '../models/upload_models.dart';
 
-/// 发布页面（网易云风格）
+/// 发布页面
 class PublishScreen extends ConsumerStatefulWidget {
   const PublishScreen({Key? key}) : super(key: key);
 
