@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:video_player/video_player.dart';
 import 'package:motion_photos/motion_photos.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+import '../services/image_edit_service.dart';
 
 /// 微信风格的照片预览页面
 /// 支持左右滑动浏览所有照片，底部显示已选择的照片
@@ -32,6 +34,8 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
   late Map<String, bool> _livePhotoSettings;
   bool _currentIsLivePhoto = false; // 当前照片是否是实况
   final Map<String, bool> _livePhotoCache = {}; // 缓存照片的live状态
+  final ImageEditService _editService = ImageEditService.instance; // 图片编辑服务
+  bool _isEditingComplete = false; // 防止编辑完成回调多次执行
 
   @override
   void initState() {
@@ -147,6 +151,258 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
     }
   }
 
+  /// 处理图片编辑
+  Future<void> _handleEdit() async {
+    final currentAsset = widget.allPhotos[_currentIndex];
+
+    // 视频不支持编辑
+    if (currentAsset.type == AssetType.video) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('仅支持图片编辑')),
+      );
+      return;
+    }
+
+    try {
+      // 获取原始文件路径（用于 live photo 视频提取）
+      final originalFile = await currentAsset.file;
+      final originalFilePath = originalFile?.path;
+
+      // 获取当前图片文件（优先使用已编辑版本）
+      final file = await _editService.getFinalFile(currentAsset);
+      if (file == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法加载图片')),
+        );
+        return;
+      }
+
+      // 重置编辑完成标志
+      _isEditingComplete = false;
+
+      // 跳转到图片编辑器
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProImageEditor.file(
+            file,
+            configs: ProImageEditorConfigs(
+              // 启用所有可用的编辑工具（暂不包括 sticker，需要自定义贴纸资源）
+              mainEditor: const MainEditorConfigs(
+                tools: [
+                  SubEditorMode.paint,      // 画笔
+                  SubEditorMode.text,       // 文字
+                  SubEditorMode.cropRotate, // 裁剪/旋转
+                  SubEditorMode.tune,       // 调整
+                  SubEditorMode.filter,     // 滤镜
+                  SubEditorMode.blur,       // 模糊
+                  SubEditorMode.emoji,      // 表情
+                  // SubEditorMode.sticker, // 贴纸（需要提供 builder）
+                ],
+              ),
+              i18n: const I18n(
+                various: I18nVarious(
+                  loadingDialogMsg: '请稍等...',
+                  closeEditorWarningTitle: '关闭编辑器？',
+                  closeEditorWarningMessage: '确定要关闭编辑器吗？您的更改将不会被保存。',
+                  closeEditorWarningConfirmBtn: '确定',
+                  closeEditorWarningCancelBtn: '取消',
+                ),
+                layerInteraction: I18nLayerInteraction(
+                  remove: '移除',
+                  edit: '编辑',
+                  rotateScale: '旋转和缩放',
+                ),
+                tuneEditor: I18nTuneEditor(
+                  bottomNavigationBarText: '调整',
+                  back: '返回',
+                  done: '完成',
+                  brightness: '亮度',
+                  contrast: '对比度',
+                  saturation: '饱和度',
+                  exposure: '曝光',
+                  hue: '色调',
+                  temperature: '色温',
+                  sharpness: '锐度',
+                  fade: '褪色',
+                  luminance: '明度',
+                  undo: '撤销',
+                  redo: '重做',
+                ),
+                paintEditor: I18nPaintEditor(
+                  bottomNavigationBarText: '画笔',
+                  moveAndZoom: '缩放',
+                  freestyle: '自由画笔',
+                  arrow: '箭头',
+                  line: '直线',
+                  rectangle: '矩形',
+                  circle: '圆形',
+                  dashLine: '虚线',
+                  dashDotLine: '点划线',
+                  hexagon: '六边形',
+                  polygon: '多边形',
+                  blur: '模糊',
+                  pixelate: '像素化',
+                  lineWidth: '线条粗细',
+                  eraser: '橡皮擦',
+                  toggleFill: '填充切换',
+                  changeOpacity: '更改透明度',
+                  undo: '撤销',
+                  redo: '重做',
+                  done: '完成',
+                  back: '返回',
+                  smallScreenMoreTooltip: '更多',
+                  opacity: '透明度',
+                  color: '颜色',
+                  strokeWidth: '线条宽度',
+                  fill: '填充',
+                  cancel: '取消',
+                ),
+                textEditor: I18nTextEditor(
+                  bottomNavigationBarText: '文字',
+                  inputHintText: '输入文字',
+                  done: '完成',
+                  back: '返回',
+                  textAlign: '对齐',
+                  fontScale: '字体大小',
+                  backgroundMode: '背景',
+                  smallScreenMoreTooltip: '更多',
+                ),
+                cropRotateEditor: I18nCropRotateEditor(
+                  bottomNavigationBarText: '裁剪/旋转',
+                  rotate: '旋转',
+                  flip: '翻转',
+                  ratio: '比例',
+                  back: '返回',
+                  done: '完成',
+                  cancel: '取消',
+                  undo: '撤销',
+                  redo: '重做',
+                  smallScreenMoreTooltip: '更多',
+                  reset: '重置',
+                ),
+                filterEditor: I18nFilterEditor(
+                  bottomNavigationBarText: '滤镜',
+                  back: '返回',
+                  done: '完成',
+                  filters: I18nFilters(
+                    none: '无',
+                    addictiveBlue: '冷色',
+                    addictiveRed: '暖色',
+                    aden: 'Aden',
+                    amaro: 'Amaro',
+                    ashby: 'Ashby',
+                    brannan: 'Brannan',
+                    brooklyn: 'Brooklyn',
+                    charmes: 'Charmes',
+                    clarendon: 'Clarendon',
+                    crema: 'Crema',
+                    dogpatch: 'Dogpatch',
+                    earlybird: 'Earlybird',
+                    f1977: '1977',
+                    gingham: 'Gingham',
+                    ginza: 'Ginza',
+                    hefe: 'Hefe',
+                    helena: 'Helena',
+                    hudson: 'Hudson',
+                    inkwell: '墨水',
+                    juno: 'Juno',
+                    kelvin: 'Kelvin',
+                    lark: 'Lark',
+                    loFi: 'Lo-Fi',
+                    ludwig: 'Ludwig',
+                    maven: 'Maven',
+                    mayfair: 'Mayfair',
+                    moon: '月光',
+                    nashville: 'Nashville',
+                    perpetua: 'Perpetua',
+                    reyes: 'Reyes',
+                    rise: 'Rise',
+                    sierra: 'Sierra',
+                    skyline: 'Skyline',
+                    slumber: 'Slumber',
+                    stinson: 'Stinson',
+                    sutro: 'Sutro',
+                    toaster: 'Toaster',
+                    valencia: 'Valencia',
+                    vesper: 'Vesper',
+                    walden: 'Walden',
+                    willow: 'Willow',
+                    xProII: 'X-Pro II',
+                  ),
+                ),
+                blurEditor: I18nBlurEditor(
+                  bottomNavigationBarText: '模糊',
+                  back: '返回',
+                  done: '完成',
+                ),
+                emojiEditor: I18nEmojiEditor(
+                  bottomNavigationBarText: '表情',
+                ),
+                stickerEditor: I18nStickerEditor(
+                  bottomNavigationBarText: '贴纸',
+                ),
+                cancel: '取消',
+                undo: '撤销',
+                redo: '重做',
+                done: '完成',
+                remove: '移除',
+                doneLoadingMsg: '正在应用更改...',
+                importStateHistoryMsg: '初始化编辑器',
+              ),
+            ),
+            callbacks: ProImageEditorCallbacks(
+              onImageEditingComplete: (Uint8List bytes) async {
+                // 防止多次执行
+                if (_isEditingComplete) return;
+                _isEditingComplete = true;
+
+                try {
+                  // 保存编辑后的数据（包括 live photo 信息）
+                  await _editService.saveEditedImage(
+                    currentAsset.id,
+                    bytes,
+                    isLivePhoto: _currentIsLivePhoto,
+                    originalFilePath: originalFilePath,
+                  );
+
+                  // 如果编辑的是实况照片，自动禁用实况功能
+                  if (_currentIsLivePhoto) {
+                    _livePhotoSettings[currentAsset.id] = false;
+                  }
+
+                  // 使用 microtask 关闭编辑器
+                  if (mounted) {
+                    Future.microtask(() {
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    });
+                  }
+                } catch (e) {
+                  print('保存编辑失败: $e');
+                  _isEditingComplete = false; // 重置标志以允许重试
+                }
+              },
+            ),
+          ),
+        ),
+      );
+
+      // 编辑器关闭后刷新预览页 UI
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('编辑图片失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('编辑失败: $e')),
+        );
+      }
+    }
+  }
+
   /// 完成选择，返回结果
   void _complete() {
     Navigator.pop(context, {
@@ -199,6 +455,35 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
               child: _buildLiveToggleButton(),
             ),
 
+          // 已编辑徽章（右上角）
+          if (_editService.isEdited(widget.allPhotos[_currentIndex].id))
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.edit, color: Colors.white, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      '已编辑',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // 底部已选择的照片列表（如果有选择）
           if (_selectedPhotos.isNotEmpty)
             Positioned(
@@ -214,6 +499,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                 livePhotoCache: _livePhotoCache,
                 onPhotoTap: _jumpToPhoto,
                 onCheckPhotoIsLive: _checkPhotoIsLive,
+                editedAssetIds: _editService.editedAssetIds,
               ),
             ),
 
@@ -371,12 +657,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
         children: [
           // 编辑按钮
           TextButton.icon(
-            onPressed: () {
-              // TODO: 实现编辑功能
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('编辑功能即将推出')),
-              );
-            },
+            onPressed: _handleEdit,
             icon: const Icon(Icons.edit, color: Colors.white),
             label: const Text('编辑', style: TextStyle(color: Colors.white)),
             style: TextButton.styleFrom(
@@ -425,6 +706,7 @@ class _PhotoPreviewItemState extends State<_PhotoPreviewItem> {
   bool _isPlayingVideo = false;
   String? _videoPath;
   bool _isLivePhoto = false;
+  final ImageEditService _editService = ImageEditService.instance;
 
   @override
   void initState() {
@@ -555,7 +837,7 @@ class _PhotoPreviewItemState extends State<_PhotoPreviewItem> {
             FutureBuilder<dynamic>(
               future: widget.asset.type == AssetType.video
                   ? widget.asset.thumbnailDataWithSize(const ThumbnailSize(1000, 1000))
-                  : widget.asset.file,
+                  : _editService.getFinalFile(widget.asset), // 使用编辑后的图片（如果存在）
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data != null) {
                   return InteractiveViewer(
@@ -619,6 +901,7 @@ class _SelectedPhotosList extends StatefulWidget {
   final Map<String, bool> livePhotoCache;
   final Function(AssetEntity) onPhotoTap;
   final Future<bool> Function(AssetEntity) onCheckPhotoIsLive;
+  final List<String> editedAssetIds; // 已编辑的资源ID列表
 
   const _SelectedPhotosList({
     Key? key,
@@ -629,6 +912,7 @@ class _SelectedPhotosList extends StatefulWidget {
     required this.livePhotoCache,
     required this.onPhotoTap,
     required this.onCheckPhotoIsLive,
+    required this.editedAssetIds,
   }) : super(key: key);
 
   @override
@@ -761,6 +1045,26 @@ class _SelectedPhotosListState extends State<_SelectedPhotosList> {
                         ),
                       ),
                     ),
+                    // 已编辑标识（右下角小圆点）
+                    if (widget.editedAssetIds.contains(photo.id))
+                      Positioned(
+                        right: 2,
+                        bottom: 2,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 8,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

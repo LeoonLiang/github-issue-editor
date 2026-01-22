@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:motion_photos/motion_photos.dart';
 import 'package:video_player/video_player.dart';
 import 'photo_preview_page.dart';
+import '../services/image_edit_service.dart';
 
 /// 选中的图片信息（包含实况选项）
 class SelectedImageInfo {
@@ -570,14 +571,24 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
     // 转换为 SelectedImageInfo
     final List<SelectedImageInfo> selectedImages = [];
     for (final asset in _selectedAssets) {
-      final file = await asset.file;
+      // 优先使用编辑后的文件，否则使用原始文件
+      final file = await ImageEditService.instance.getFinalFile(asset);
       if (file != null) {
         // 检查是否为实况照片
         bool isLive = false;
-        try {
-          isLive = await MotionPhotos(file.path).isMotionPhoto();
-        } catch (e) {
-          print('Error checking live photo: $e');
+        bool wasEdited = ImageEditService.instance.isEdited(asset.id);
+
+        if (wasEdited) {
+          // 编辑后的图片：从 ImageEditService 获取原始 live photo 状态
+          final editedInfo = ImageEditService.instance.getEditedInfo(asset.id);
+          isLive = editedInfo?.isLivePhoto ?? false;
+        } else {
+          // 未编辑的图片：检查实况
+          try {
+            isLive = await MotionPhotos(file.path).isMotionPhoto();
+          } catch (e) {
+            print('Error checking live photo: $e');
+          }
         }
 
         selectedImages.add(SelectedImageInfo(

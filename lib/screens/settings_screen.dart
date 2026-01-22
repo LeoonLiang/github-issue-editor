@@ -503,21 +503,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  /// 导入配置（从剪贴板粘贴）
+  /// 导入配置（弹窗输入）
   Future<void> _importConfig() async {
-    try {
-      // 从剪贴板读取
-      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-      if (clipboardData == null || clipboardData.text == null || clipboardData.text!.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('剪贴板为空')),
-          );
-        }
-        return;
-      }
+    final TextEditingController configInputController = TextEditingController();
 
-      final configJson = clipboardData.text!;
+    // 显示输入对话框
+    final String? configJson = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('导入配置'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '请粘贴配置 JSON：',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: configInputController,
+                maxLines: 10,
+                decoration: InputDecoration(
+                  hintText: '{"github":{"owner":"...","repo":"...","token":"..."},...}',
+                  hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, configInputController.text.trim()),
+            child: const Text('导入'),
+          ),
+        ],
+      ),
+    );
+
+    // 用户取消了
+    if (configJson == null || configJson.isEmpty) {
+      return;
+    }
+
+    try {
+      // 尝试解析 JSON
       final json = jsonDecode(configJson) as Map<String, dynamic>;
       final config = AppConfig.fromJson(json);
 
@@ -555,17 +594,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('配置已导入')),
+            const SnackBar(content: Text('✅ 配置已导入')),
           );
         }
       }
     } catch (e) {
+      // 格式错误提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败: $e')),
+          const SnackBar(
+            content: Text('❌ 配置格式不正确，请检查 JSON 格式'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     }
+    // 不需要手动 dispose，让 controller 在方法结束后自然被垃圾回收
   }
 
   /// 加载应用版本信息
