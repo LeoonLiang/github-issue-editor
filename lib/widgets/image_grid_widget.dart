@@ -222,6 +222,16 @@ class ImageGridWidget extends ConsumerWidget {
     );
   }
 
+  /// 显示实况视频预览
+  void _showLiveVideoPreview(BuildContext context, ImageUploadState uploadState) {
+    if (uploadState.result == null || uploadState.result!.videoUrl.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => _LiveVideoPreviewDialog(uploadState: uploadState),
+    );
+  }
+
   /// 复制到剪贴板
   void _copyToClipboard(BuildContext context, String text) {
     // 使用 Clipboard
@@ -320,6 +330,16 @@ class _ImagePreviewDialogState extends State<_ImagePreviewDialog> {
     );
   }
 
+  /// 显示实况视频预览
+  void _showLiveVideoPreview(BuildContext context, ImageUploadState uploadState) {
+    if (uploadState.result == null || uploadState.result!.videoUrl.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => _LiveVideoPreviewDialog(uploadState: uploadState),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -338,9 +358,18 @@ class _ImagePreviewDialogState extends State<_ImagePreviewDialog> {
                   ),
                   child: widget.uploadState.isVideo
                       ? _buildVideoPreview()
-                      : Image.network(
-                          widget.uploadState.result!.imageUrl,
-                          fit: BoxFit.contain,
+                      : GestureDetector(
+                          onLongPress: () {
+                            // 如果有 liveVideo，长按播放视频
+                            if (widget.uploadState.result!.videoUrl.isNotEmpty) {
+                              Navigator.of(context).pop(); // 关闭当前预览
+                              _showLiveVideoPreview(context, widget.uploadState);
+                            }
+                          },
+                          child: Image.network(
+                            widget.uploadState.result!.imageUrl,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                 ),
                 const SizedBox(height: 16),
@@ -447,6 +476,37 @@ class _ImagePreviewDialogState extends State<_ImagePreviewDialog> {
               ],
             ),
           ),
+          // LivePhoto 长按提示
+          if (widget.uploadState.result!.videoUrl.isNotEmpty)
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.album, color: Colors.white, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        '长按图片播放视频',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             top: 40,
             right: 20,
@@ -528,10 +588,145 @@ class _ImagePreviewDialogState extends State<_ImagePreviewDialog> {
               ),
             ),
           // 加载中
-          if (_isInitializing)
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ],
+      ),
+    );
+  }
+}
+
+/// 实况视频预览对话框
+class _LiveVideoPreviewDialog extends StatefulWidget {
+  final ImageUploadState uploadState;
+
+  const _LiveVideoPreviewDialog({
+    Key? key,
+    required this.uploadState,
+  }) : super(key: key);
+
+  @override
+  State<_LiveVideoPreviewDialog> createState() => _LiveVideoPreviewDialogState();
+}
+
+class _LiveVideoPreviewDialogState extends State<_LiveVideoPreviewDialog> {
+  VideoPlayerController? _videoController;
+  bool _isInitializing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.uploadState.result!.videoUrl),
+      );
+
+      await _videoController!.initialize();
+      await _videoController!.setLooping(true);
+      await _videoController!.play();
+
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    } catch (e) {
+      print('Error initializing video: $e');
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        children: [
+          Center(
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+                maxWidth: MediaQuery.of(context).size.width * 0.9,
+              ),
+              child: _isInitializing
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : _videoController != null && _videoController!.value.isInitialized
+                      ? AspectRatio(
+                          aspectRatio: _videoController!.value.aspectRatio,
+                          child: VideoPlayer(_videoController!),
+                        )
+                      : const Center(
+                          child: Text(
+                            '视频加载失败',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
             ),
+          ),
+          Positioned(
+            top: 40,
+            right: 20,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.album, color: Colors.white, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'Live Photo',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

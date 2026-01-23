@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/config_provider.dart';
 import '../providers/github_provider.dart';
@@ -31,7 +32,8 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       // 距离底部还有200px时开始加载
       final params = IssuesParams(label: _selectedLabel, state: _selectedState);
       ref.read(issuesProvider(params).notifier).loadMore();
@@ -45,11 +47,13 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('文章列表'),
+        title: const Text('文章列表', style: TextStyle(fontWeight: FontWeight.bold)),
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        backgroundColor: Colors.grey[50], // 浅灰色背景
         actions: [
           // 状态筛选按钮
           PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(Icons.filter_list_alt),
             tooltip: '筛选状态',
             onSelected: (value) {
               setState(() {
@@ -59,51 +63,39 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
             itemBuilder: (context) => [
               PopupMenuItem(
                 value: 'all',
-                child: Row(
-                  children: [
-                    Icon(
-                      _selectedState == 'all' ? Icons.check : Icons.article,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('全部'),
-                  ],
+                child: _buildStateMenuItem(
+                  'all',
+                  Icons.article_outlined,
+                  '全部',
+                  Colors.black,
                 ),
               ),
               PopupMenuItem(
                 value: 'open',
-                child: Row(
-                  children: [
-                    Icon(
-                      _selectedState == 'open' ? Icons.check : Icons.lock_open,
-                      size: 18,
-                      color: Colors.green,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('开放', style: TextStyle(color: Colors.green)),
-                  ],
+                child: _buildStateMenuItem(
+                  'open',
+                  Icons.lock_open_outlined,
+                  '开放',
+                  Colors.green,
                 ),
               ),
               PopupMenuItem(
                 value: 'closed',
-                child: Row(
-                  children: [
-                    Icon(
-                      _selectedState == 'closed' ? Icons.check : Icons.lock,
-                      size: 18,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('已关闭', style: TextStyle(color: Colors.red)),
-                  ],
+                child: _buildStateMenuItem(
+                  'closed',
+                  Icons.lock_outline,
+                  '已关闭',
+                  Colors.red,
                 ),
               ),
             ],
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: '刷新',
             onPressed: () {
-              final params = IssuesParams(label: _selectedLabel, state: _selectedState);
+              final params =
+                  IssuesParams(label: _selectedLabel, state: _selectedState);
               ref.read(issuesProvider(params).notifier).refresh();
               ref.invalidate(labelsProvider);
             },
@@ -119,11 +111,12 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
                   data: (labels) => _buildLabelFilter(['all', ...labels]),
                   loading: () => const LinearProgressIndicator(),
                   error: (error, stack) => Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text('加载标签失败: $error', style: const TextStyle(color: Colors.red)),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('加载标签失败: $error',
+                        style: const TextStyle(color: Colors.red)),
                   ),
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, thickness: 1),
                 // Issues 列表
                 Expanded(
                   child: _buildIssueList(),
@@ -132,7 +125,7 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
             ),
       // 右下角发布按钮
       floatingActionButton: config.isConfigured
-          ? FloatingActionButton(
+          ? FloatingActionButton.extended(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -141,9 +134,31 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
                   ),
                 );
               },
-              child: const Icon(Icons.edit),
+              icon: const Icon(Icons.edit_document),
+              label: const Text('发布'),
             )
           : null,
+    );
+  }
+
+  /// 状态筛选菜单项
+  Widget _buildStateMenuItem(
+    String value,
+    IconData icon,
+    String text,
+    Color color,
+  ) {
+    final isSelected = _selectedState == value;
+    return Row(
+      children: [
+        Icon(
+          isSelected ? Icons.check_circle_outline : icon,
+          size: 20,
+          color: color,
+        ),
+        const SizedBox(width: 12),
+        Text(text, style: TextStyle(color: isSelected ? color : null)),
+      ],
     );
   }
 
@@ -154,26 +169,30 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.settings_outlined,
-            size: 64,
-            color: Colors.grey[400],
+            Icons.settings_suggest_outlined,
+            size: 80,
+            color: Colors.grey[300],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
             '请先配置 GitHub 和 OSS',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          Text(
+            '完成配置后即可开始管理文章',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              // 跳转到设置页（索引改为1）
-              DefaultTabController.of(context)?.animateTo(1);
+              // TODO: 跳转到设置页
             },
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
             label: const Text('前往设置'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
           ),
         ],
       ),
@@ -183,8 +202,9 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
   /// 标签过滤器
   Widget _buildLabelFilter(List<String> labels) {
     return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      height: 60,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      color: Colors.grey[50],
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: labels.length,
@@ -195,13 +215,28 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              label: Text(label == 'all' ? '全部' : label),
+              label: Text(
+                label == 'all' ? '全部' : label,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
               selected: isSelected,
               onSelected: (selected) {
                 setState(() {
                   _selectedLabel = label;
                 });
               },
+              selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey[300]!,
+                  width: 1,
+                ),
+              ),
             ),
           );
         },
@@ -219,24 +254,24 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-            const SizedBox(height: 16),
+            Icon(Icons.cloud_off_rounded, size: 80, color: Colors.red[200]),
+            const SizedBox(height: 24),
             Text(
               '加载失败',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
               issuesState.error!,
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
                 ref.read(issuesProvider(params).notifier).refresh();
               },
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('重试'),
             ),
           ],
@@ -251,16 +286,18 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
           children: [
             Icon(
               Icons.article_outlined,
-              size: 64,
-              color: Colors.grey[400],
+              size: 80,
+              color: Colors.grey[300],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               '暂无文章',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '尝试切换筛选条件或发布新文章',
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -273,19 +310,20 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
       },
       child: ListView.separated(
         controller: _scrollController,
+        padding: const EdgeInsets.all(8),
         itemCount: issuesState.issues.length + (issuesState.hasMore ? 1 : 0),
-        separatorBuilder: (context, index) => const Divider(height: 1),
+        separatorBuilder: (context, index) => const SizedBox(height: 0),
         itemBuilder: (context, index) {
           if (index >= issuesState.issues.length) {
             // 加载更多指示器
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               alignment: Alignment.center,
               child: issuesState.isLoading
                   ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(strokeWidth: 3),
                     )
                   : const SizedBox.shrink(),
             );
@@ -300,145 +338,146 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
   Widget _buildIssueItem(GitHubIssue issue) {
     final isOpen = issue.state == 'open';
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 显示部分正文内容
-          if (issue.body.isNotEmpty)
-            Text(
-              issue.body,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.normal,
-                color: Colors.black87,
-                height: 1.4,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          const SizedBox(height: 8),
-          // 标题（小字）
-          Text(
-            issue.title,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.normal,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[200]!, width: 1),
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          // 标签和创建时间
-          Row(
-            children: [
-              // 标签
-              if (issue.labels.isNotEmpty)
-                Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: issue.labels.map((label) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getLabelColor(label),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        title: Text(
+          issue.title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            if (issue.body.isNotEmpty)
+              Text(
+                issue.body.replaceAll(RegExp(r'#+\s.*'), '').trim(), // 简单移除Markdown标题
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            const SizedBox(height: 12),
+            // 底部元数据
+            Row(
+              children: [
+                // 状态图标
+                Icon(
+                  isOpen ? Icons.check_circle_outline : Icons.cancel_outlined,
+                  size: 14,
+                  color: isOpen ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isOpen ? '开放' : '已关闭',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isOpen ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              const SizedBox(width: 8),
-              // 状态图标和时间
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isOpen ? Icons.lock_open : Icons.lock,
-                    size: 12,
-                    color: isOpen ? Colors.green : Colors.red,
+                const Spacer(),
+                // 创建日期
+                Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text(
+                  _formatDate(issue.createdAt),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _formatDate(issue.createdAt),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
+                ),
+              ],
+            ),
+            // 标签
+            if (issue.labels.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: issue.labels.map((label) {
+                  return Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getLabelColor(label).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                  ),
-                ],
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _getLabelColor(label).withBlue(50).withGreen(50),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-            ],
-          ),
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          if (value == 'edit') {
-            _editIssue(issue);
-          } else if (value == 'close') {
-            _closeIssue(issue);
-          } else if (value == 'view') {
-            _viewIssue(issue);
-          }
+            ]
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'edit') {
+              _editIssue(issue);
+            } else if (value == 'quick_edit') {
+              _quickEditIssue(issue);
+            } else if (value == 'close') {
+              _closeIssue(issue);
+            } else if (value == 'view') {
+              _viewIssue(issue);
+            }
+          },
+          itemBuilder: (context) => [
+            _buildPopupMenuItem(Icons.open_in_browser_outlined, '查看', 'view'),
+            _buildPopupMenuItem(Icons.edit_note_outlined, '快速编辑', 'quick_edit'),
+            _buildPopupMenuItem(Icons.edit_outlined, '完整编辑', 'edit'),
+            if (isOpen)
+              _buildPopupMenuItem(
+                Icons.close_rounded,
+                '关闭',
+                'close',
+                color: Colors.red,
+              ),
+          ],
+        ),
+        onTap: () {
+          _editIssue(issue); // 点击直接进入编辑
         },
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'view',
-            child: Row(
-              children: [
-                Icon(Icons.open_in_browser, size: 18),
-                SizedBox(width: 8),
-                Text('查看'),
-              ],
-            ),
-          ),
-          const PopupMenuItem(
-            value: 'edit',
-            child: Row(
-              children: [
-                Icon(Icons.edit, size: 18),
-                SizedBox(width: 8),
-                Text('编辑'),
-              ],
-            ),
-          ),
-          // 只有开放状态才显示关闭选项
-          if (isOpen)
-            const PopupMenuItem(
-              value: 'close',
-              child: Row(
-                children: [
-                  Icon(Icons.close, size: 18, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('关闭', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupMenuItem(
+    IconData icon,
+    String text,
+    String value, {
+    Color? color,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 12),
+          Text(text, style: TextStyle(color: color)),
         ],
       ),
-      onTap: () {
-        _viewIssueDetails(issue);
-      },
     );
   }
 
@@ -447,16 +486,14 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
     // 使用标签名称的哈希值生成颜色
     final hash = label.hashCode;
     final colors = [
-      const Color(0xFFEC4141), // 红色
-      const Color(0xFF4CAF50), // 绿色
-      const Color(0xFF2196F3), // 蓝色
-      const Color(0xFFFF9800), // 橙色
-      const Color(0xFF9C27B0), // 紫色
-      const Color(0xFF00BCD4), // 青色
-      const Color(0xFFFFEB3B), // 黄色
-      const Color(0xFF795548), // 棕色
-      const Color(0xFF607D8B), // 蓝灰色
-      const Color(0xFFE91E63), // 粉色
+      Colors.red,
+      Colors.green,
+      Colors.blue,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.amber,
     ];
     return colors[hash.abs() % colors.length];
   }
@@ -471,69 +508,45 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
     }
   }
 
-  /// 查看 Issue 详情
-  void _viewIssueDetails(GitHubIssue issue) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(issue.title),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (issue.labels.isNotEmpty) ...[
-                Wrap(
-                  spacing: 4,
-                  children: issue.labels.map((label) {
-                    return Chip(label: Text(label));
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-              ],
-              Text(issue.body),
-              const SizedBox(height: 12),
-              Text(
-                '创建于: ${_formatDate(issue.createdAt)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// 在浏览器中查看
   void _viewIssue(GitHubIssue issue) {
     // TODO: 使用 url_launcher 打开浏览器
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('打开 ${issue.htmlUrl}')),
+      SnackBar(
+        content: Text('即将打开: ${issue.htmlUrl}'),
+        action: SnackBarAction(label: '打开', onPressed: () {}),
+      ),
     );
   }
 
   /// 编辑 Issue
   Future<void> _editIssue(GitHubIssue issue) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublishScreen(issue: issue),
+      ),
+    ).then((_) {
+      // 从发布页面返回后刷新列表
+      final params = IssuesParams(label: _selectedLabel, state: _selectedState);
+      ref.read(issuesProvider(params).notifier).refresh();
+    });
+  }
+
+  /// 快速编辑 Issue（仅编辑标题和内容）
+  Future<void> _quickEditIssue(GitHubIssue issue) async {
     final titleController = TextEditingController(text: issue.title);
-    final bodyController = TextEditingController(text: issue.body);
-    final availableLabels = await ref.read(labelsProvider.future);
-    final selectedLabels = List<String>.from(issue.labels);
+    final contentController = TextEditingController(text: issue.body);
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('编辑文章'),
-          content: SingleChildScrollView(
+      builder: (context) => AlertDialog(
+        title: const Text('快速编辑'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: titleController,
@@ -541,53 +554,31 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
                     labelText: '标题',
                     border: OutlineInputBorder(),
                   ),
-                  maxLines: 1,
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: bodyController,
+                  controller: contentController,
                   decoration: const InputDecoration(
                     labelText: '内容',
                     border: OutlineInputBorder(),
                   ),
-                  maxLines: 10,
-                ),
-                const SizedBox(height: 16),
-                const Text('标签:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: availableLabels.map((label) {
-                    final isSelected = selectedLabels.contains(label);
-                    return FilterChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            selectedLabels.add(label);
-                          } else {
-                            selectedLabels.remove(label);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+                  maxLines: 15,
+                  minLines: 5,
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('保存'),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('保存'),
+          ),
+        ],
       ),
     );
 
@@ -597,30 +588,34 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
         if (githubService != null) {
           await githubService.updateGitHubIssue(
             issue.number,
-            titleController.text,
-            bodyController.text,
-            selectedLabels,
+            titleController.text.trim(),
+            contentController.text.trim(),
+            issue.labels,
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('文章已更新')),
+              const SnackBar(
+                content: Text('更新成功'),
+                backgroundColor: Colors.green,
+              ),
             );
             // 刷新列表
-            final params = IssuesParams(label: _selectedLabel, state: _selectedState);
+            final params =
+                IssuesParams(label: _selectedLabel, state: _selectedState);
             ref.read(issuesProvider(params).notifier).refresh();
           }
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('更新失败: $e')),
+            SnackBar(content: Text('更新失败: $e'), backgroundColor: Colors.red),
           );
         }
       }
     }
 
     titleController.dispose();
-    bodyController.dispose();
+    contentController.dispose();
   }
 
   /// 关闭 Issue
@@ -629,16 +624,30 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认关闭'),
-        content: Text('确定要关闭 "${issue.title}" 吗？'),
+        content: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: '确定要关闭文章 "'),
+              TextSpan(
+                text: issue.title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: '" 吗？此操作不可逆。'),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('取消'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('关闭'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('确认关闭'),
           ),
         ],
       ),
@@ -651,17 +660,21 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
           await githubService.closeGitHubIssue(issue.number);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Issue 已关闭')),
+              const SnackBar(
+                content: Text('文章已关闭'),
+                backgroundColor: Colors.green,
+              ),
             );
             // 刷新列表
-            final params = IssuesParams(label: _selectedLabel, state: _selectedState);
+            final params =
+                IssuesParams(label: _selectedLabel, state: _selectedState);
             ref.read(issuesProvider(params).notifier).refresh();
           }
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('关闭失败: $e')),
+            SnackBar(content: Text('关闭失败: $e'), backgroundColor: Colors.red),
           );
         }
       }

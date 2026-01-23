@@ -9,6 +9,7 @@ class ImageUploadCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onRetry;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const ImageUploadCard({
     Key? key,
@@ -16,12 +17,14 @@ class ImageUploadCard extends StatelessWidget {
     required this.onDelete,
     this.onRetry,
     this.onTap,
+    this.onLongPress,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Stack(
         children: [
           // 主容器

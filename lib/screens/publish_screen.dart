@@ -15,7 +15,8 @@ import '../models/upload_models.dart';
 
 /// 发布页面
 class PublishScreen extends ConsumerStatefulWidget {
-  const PublishScreen({Key? key}) : super(key: key);
+  final GitHubIssue? issue;
+  const PublishScreen({Key? key, this.issue}) : super(key: key);
 
   @override
   ConsumerState<PublishScreen> createState() => _PublishScreenState();
@@ -32,10 +33,17 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
   Timer? _debounce;
 
+  bool get _isEditing => widget.issue != null;
+
   @override
   void initState() {
     super.initState();
-    _loadDraft();
+
+    if (_isEditing) {
+      _loadIssueData();
+    } else {
+      _loadDraft();
+    }
     // 添加监听器以实现自动保存
     _titleController.addListener(_autoSaveDraft);
     _contentController.addListener(_autoSaveDraft);
@@ -48,6 +56,12 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     _contentController.removeListener(_autoSaveDraft);
     _titleController.dispose();
     _contentController.dispose();
+
+    // 如果是编辑模式，清空上传队列，避免覆盖新建文章的草稿
+    if (_isEditing) {
+      ref.read(uploadQueueProvider.notifier).state = [];
+    }
+
     super.dispose();
   }
 
@@ -68,52 +82,48 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
         });
       }
 
-      // 恢复草稿图片到上传队列（只在队列为空时恢复，避免重复添加）
+      // 先清空队列，确保不会有编辑页面遗留的图片
+      ref.read(uploadQueueProvider.notifier).state = [];
+
+      // 恢复草稿图片到上传队列
       if (draftImagesJson.isNotEmpty) {
         try {
-          final currentQueue = ref.read(uploadQueueProvider);
+          final List<dynamic> imagesData = jsonDecode(draftImagesJson);
+          final List<ImageUploadState> restoredStates = [];
 
-          // 只在队列为空时才恢复草稿图片
-          if (currentQueue.isEmpty) {
-            final List<dynamic> imagesData = jsonDecode(draftImagesJson);
-            final List<ImageUploadState> restoredStates = [];
+          // 将保存的图片URL转换为 ImageUploadState
+          for (var imageData in imagesData) {
+            final imageUrl = imageData['imageUrl'] as String?;
+            final thumbnailUrl = imageData['thumbnailUrl'] as String?;
+            final videoUrl = imageData['videoUrl'] as String?;
 
-            // 将保存的图片URL转换为 ImageUploadState
-            for (var imageData in imagesData) {
-              final imageUrl = imageData['imageUrl'] as String?;
-              final thumbnailUrl = imageData['thumbnailUrl'] as String?;
-              final videoUrl = imageData['videoUrl'] as String?;
+            if (imageUrl != null) {
+              // 创建一个虚拟的 XFile（仅用于显示，不会实际使用）
+              final file = XFile('');
 
-              if (imageUrl != null) {
-                // 创建一个虚拟的 XFile（仅用于显示，不会实际使用）
-                final file = XFile('');
+              final uploadState = ImageUploadState(
+                id: const Uuid().v4(),
+                file: file,
+                status: UploadStatus.success,
+                progress: 1.0,
+                result: UploadResult(
+                  imageUrl: imageUrl,
+                  videoUrl: videoUrl ?? '',
+                  width: 0,
+                  height: 0,
+                  thumbhash: '',
+                ),
+                thumbnailUrl: thumbnailUrl,
+              );
 
-                final uploadState = ImageUploadState(
-                  id: const Uuid().v4(),
-                  file: file,
-                  status: UploadStatus.success,
-                  progress: 1.0,
-                  result: UploadResult(
-                    imageUrl: imageUrl,
-                    videoUrl: videoUrl ?? '',
-                    width: 0,
-                    height: 0,
-                    thumbhash: '',
-                  ),
-                  thumbnailUrl: thumbnailUrl,
-                );
-
-                restoredStates.add(uploadState);
-              }
+              restoredStates.add(uploadState);
             }
+          }
 
-            // 一次性设置所有图片状态
-            if (restoredStates.isNotEmpty) {
-              ref.read(uploadQueueProvider.notifier).state = restoredStates;
-              print('✅ 已恢复 ${restoredStates.length} 张草稿图片');
-            }
-          } else {
-            print('⚠️ 上传队列不为空，跳过恢复草稿图片');
+          // 一次性设置所有图片状态
+          if (restoredStates.isNotEmpty) {
+            ref.read(uploadQueueProvider.notifier).state = restoredStates;
+            print('✅ 已恢复 ${restoredStates.length} 张草稿图片');
           }
         } catch (e) {
           print('恢复草稿图片失败: $e');
@@ -124,8 +134,99 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     }
   }
 
+  /// 加载已有 Issue 数据
+  void _loadIssueData() {
+    if (widget.issue == null) return;
+    final issue = widget.issue!;
+
+    _titleController.text = issue.title;
+
+    // 从 body 中分离图片和纯文本
+    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)(\{.*?\})?');
+    final matches = imageRegex.allMatches(issue.body);
+    String contentText = issue.body.replaceAll(imageRegex, '').trim();
+
+    // 移除音乐和视频卡片
+    final cardRegex = RegExp(r'\[(music|video)\]\(.*?\)\n');
+    contentText = contentText.replaceAll(cardRegex, '').trim();
+
+    _contentController.text = contentText;
+
+    if (issue.labels.isNotEmpty) {
+      _selectedLabel = issue.labels.first;
+    }
+
+    final List<ImageUploadState> imageStates = [];
+    for (var match in matches) {
+      final imageUrl = match.group(1);
+      final attributesString = match.group(2) ?? ''; // 获取 {} 中的属性
+
+      if (imageUrl != null) {
+        // 解析属性：liveVideo, width, height, thumbhash
+        String videoUrl = '';
+        int width = 0;
+        int height = 0;
+        String thumbhash = '';
+
+        if (attributesString.isNotEmpty) {
+          // 提取 liveVideo
+          final videoRegex = RegExp(r'liveVideo="([^"]*)"');
+          final videoMatch = videoRegex.firstMatch(attributesString);
+          if (videoMatch != null) {
+            videoUrl = videoMatch.group(1) ?? '';
+          }
+
+          // 提取 width
+          final widthRegex = RegExp(r'width=(\d+)');
+          final widthMatch = widthRegex.firstMatch(attributesString);
+          if (widthMatch != null) {
+            width = int.tryParse(widthMatch.group(1) ?? '0') ?? 0;
+          }
+
+          // 提取 height
+          final heightRegex = RegExp(r'height=(\d+)');
+          final heightMatch = heightRegex.firstMatch(attributesString);
+          if (heightMatch != null) {
+            height = int.tryParse(heightMatch.group(1) ?? '0') ?? 0;
+          }
+
+          // 提取 thumbhash
+          final thumbhashRegex = RegExp(r'thumbhash="([^"]*)"');
+          final thumbhashMatch = thumbhashRegex.firstMatch(attributesString);
+          if (thumbhashMatch != null) {
+            thumbhash = thumbhashMatch.group(1) ?? '';
+          }
+        }
+
+        final uploadState = ImageUploadState(
+          id: const Uuid().v4(),
+          file: XFile(''), // 虚拟文件
+          status: UploadStatus.success,
+          progress: 1.0,
+          result: UploadResult(
+            imageUrl: imageUrl,
+            videoUrl: videoUrl,
+            width: width,
+            height: height,
+            thumbhash: thumbhash,
+          ),
+          thumbnailUrl: imageUrl, // 使用原图作为缩略图
+          isLivePhoto: videoUrl.isNotEmpty,
+          enableLiveVideo: videoUrl.isNotEmpty, // 如果有视频URL，标记为启用live视频
+        );
+        imageStates.add(uploadState);
+      }
+    }
+
+    // 设置图片状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(uploadQueueProvider.notifier).state = imageStates;
+    });
+  }
+
   /// 保存草稿
   Future<void> _saveDraft() async {
+    if (_isEditing) return; // 编辑模式不保存草稿
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('draft_title', _titleController.text);
@@ -144,6 +245,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
   /// 自动保存草稿（防抖）
   void _autoSaveDraft() {
+    if (_isEditing) return; // 编辑模式不自动保存
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 800), () {
       _saveDraftSilently();
@@ -152,6 +254,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
   /// 静默保存草稿（不显示提示信息）
   Future<void> _saveDraftSilently() async {
+    if (_isEditing) return; // 编辑模式不保存
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('draft_title', _titleController.text);
@@ -167,6 +270,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
   /// 保存草稿图片到 SharedPreferences
   Future<void> _saveDraftImages(SharedPreferences prefs) async {
+    if (_isEditing) return; // 编辑模式不保存草稿图片
     try {
       final uploadQueue = ref.read(uploadQueueProvider);
 
@@ -193,8 +297,8 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清空草稿'),
-        content: const Text('确定要清空草稿吗？'),
+        title: const Text('清空内容'),
+        content: const Text('确定要清空所有内容吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -209,14 +313,16 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     );
 
     if (confirmed == true) {
-      await _clearDraft();
+      if (!_isEditing) {
+        await _clearDraft();
+      }
       setState(() {
         _titleController.clear();
         _contentController.clear();
       });
       // 清空上传队列中的图片
       ref.read(uploadQueueProvider.notifier).state = [];
-      _showSuccessMessage('草稿已清空');
+      _showSuccessMessage('内容已清空');
     }
   }
 
@@ -377,20 +483,29 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
       // 在末尾追加九宫格图片（保持顺序）
       final gridMarkdown = uploadResults.map((r) => r.toMarkdown()).join('\n');
-      markdownText = markdownText.trim() + '\n' + gridMarkdown;
+      markdownText = markdownText.trim() + '\n\n' + gridMarkdown;
     }
 
     try {
-      await githubService.createGitHubIssue(
-        title,
-        markdownText,
-        _selectedLabel,
-      );
-
-      // 发布成功后清除草稿
-      await _clearDraft();
-
-      _showSuccessMessage('发布成功！');
+      if (_isEditing) {
+        // 更新 Issue
+        await githubService.updateGitHubIssue(
+          widget.issue!.number,
+          title,
+          markdownText,
+          [_selectedLabel], // 假设只支持单标签
+        );
+        _showSuccessMessage('更新成功！');
+      } else {
+        // 创建 Issue
+        await githubService.createGitHubIssue(
+          title,
+          markdownText,
+          _selectedLabel,
+        );
+        _showSuccessMessage('发布成功！');
+        await _clearDraft(); // 发布成功后清除草稿
+      }
 
       // 重置状态
       _titleController.clear();
@@ -398,25 +513,35 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
       uploadNotifier.clear();
 
       // 返回上一页
-      Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context, true); // 返回 true 表示成功
+      }
     } catch (e, stackTrace) {
       _showErrorMessage('提交失败，请重试');
       print('提交失败: $e');
       print(stackTrace);
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   void _showSuccessMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
   void _showErrorMessage(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
+      SnackBar(
+        content: Text(text),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -426,291 +551,184 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
     // 监听上传队列变化，当图片上传成功时自动保存草稿
     ref.listen<List<ImageUploadState>>(uploadQueueProvider, (previous, next) {
-      // 检查是否有新的图片上传成功
+      if (_isEditing) return; // 编辑模式不自动保存
+
       final previousSuccess = previous?.where((s) => s.isSuccess).length ?? 0;
       final nextSuccess = next.where((s) => s.isSuccess).length;
 
       if (nextSuccess > previousSuccess) {
-        // 有新图片上传成功，自动保存草稿
         _saveDraftSilently();
       }
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+        title: Text(
+          _isEditing ? '编辑文章' : '发布文章',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('发布笔记', style: TextStyle(color: Colors.black)),
+        actions: [
+          // 保存草稿按钮（仅非编辑模式）
+          if (!_isEditing)
+            IconButton(
+              icon: const Icon(Icons.drafts_outlined),
+              tooltip: '保存草稿',
+              onPressed: _saveDraft,
+            ),
+          // 清空按钮
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined),
+            tooltip: '清空内容',
+            onPressed: _confirmClearDraft,
+          ),
+        ],
       ),
       body: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
-              child: RepaintBoundary(
-                child: Container(
-                  color: Colors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      // 图片网格 - 放在最上面
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: ImageGridWidget(),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // 标题输入框
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: TextField(
-                          controller: _titleController,
-                          style: const TextStyle(fontSize: 16),
-                          decoration: const InputDecoration(
-                            hintText: '添加标题',
-                            hintStyle: TextStyle(
-                              color: Color(0xFFBBBBBB),
-                              fontSize: 16,
-                            ),
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ),
-
-                      const Divider(height: 1, color: Color(0xFFEEEEEE)),
-
-                      // 内容输入框
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        child: TextField(
-                          controller: _contentController,
-                          maxLines: 8,
-                          style: const TextStyle(fontSize: 15),
-                          decoration: const InputDecoration(
-                            hintText: '添加正文',
-                            hintStyle: TextStyle(
-                              color: Color(0xFFBBBBBB),
-                              fontSize: 15,
-                            ),
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-                    ],
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 标题输入框
+                  TextField(
+                    controller: _titleController,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: '文章标题',
+                      border: InputBorder.none,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+
+                  // 内容输入框
+                  TextField(
+                    controller: _contentController,
+                    maxLines: null, // 自动换行
+                    minLines: 10,
+                    style: const TextStyle(fontSize: 16, height: 1.6),
+                    decoration: const InputDecoration(
+                      hintText: '开始写作...',
+                      border: InputBorder.none,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 图片网格
+                  ImageGridWidget(),
+                ],
               ),
             ),
           ),
 
           // 底部操作区域
           Container(
-            color: Colors.white,
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              border: Border(
+                top: BorderSide(color: Colors.grey[200]!),
+              ),
+            ),
             child: Column(
               children: [
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                // 添加内容按钮
-                InkWell(
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) => Container(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.music_note,
-                                  color: Color(0xFFEC4141)),
-                              title: const Text('添加音乐'),
-                              onTap: () {
-                                Navigator.pop(context);
-                                _showMusicInputDialog();
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.videocam,
-                                  color: Color(0xFFEC4141)),
-                              title: const Text('添加视频'),
-                              onTap: () {
-                                Navigator.pop(context);
-                                _showVideoInputDialog();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.music_note, size: 24),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          '添加内容',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const Spacer(),
-                        const Icon(Icons.chevron_right,
-                            color: Color(0xFFBBBBBB)),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-
-                // 标签区域
+                // 标签和工具栏
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      const Text(
-                        '标签',
-                        style: TextStyle(fontSize: 15, color: Colors.black87),
-                      ),
-                      const SizedBox(width: 12),
+                      // 标签选择
                       Expanded(
                         child: labelsAsync.when(
                           data: (labels) {
                             if (labels.isEmpty) {
-                              return const Text(
-                                '请先在设置中配置 GitHub',
-                                style: TextStyle(
-                                    color: Color(0xFFBBBBBB), fontSize: 14),
-                              );
+                              return const Text('无可用标签');
                             }
-                            // 确保 _selectedLabel 在列表中
                             if (!labels.contains(_selectedLabel)) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                setState(() {
-                                  _selectedLabel = labels.first;
-                                });
-                              });
+                              _selectedLabel = labels.first;
                             }
-                            return DropdownButton<String>(
-                              value: labels.contains(_selectedLabel)
-                                  ? _selectedLabel
-                                  : labels.first,
-                              isExpanded: true,
-                              underline: Container(),
-                              items: labels.map((label) {
-                                return DropdownMenuItem(
-                                  value: label,
-                                  child: Text('# $label'),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedLabel = value;
-                                  });
-                                }
-                              },
+                            return DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedLabel,
+                                items: labels.map((label) {
+                                  return DropdownMenuItem(
+                                    value: label,
+                                    child: Text('# $label'),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _selectedLabel = value;
+                                    });
+                                  }
+                                },
+                              ),
                             );
                           },
-                          loading: () => const Text(
-                            '加载中...',
-                            style: TextStyle(color: Color(0xFFBBBBBB)),
-                          ),
-                          error: (error, stack) => Text(
-                            '加载失败',
-                            style: TextStyle(color: Colors.red[300]),
-                          ),
+                          loading: () => const Text('加载标签...'),
+                          error: (e, s) => const Text('加载标签失败'),
                         ),
+                      ),
+                      // 媒体按钮
+                      IconButton(
+                        icon: const Icon(Icons.music_note_outlined),
+                        tooltip: '添加音乐卡片',
+                        onPressed: _showMusicInputDialog,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.videocam_outlined),
+                        tooltip: '添加视频卡片',
+                        onPressed: _showVideoInputDialog,
                       ),
                     ],
                   ),
                 ),
-
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
 
                 // 底部按钮
                 Padding(
                   padding: EdgeInsets.only(
                     left: 16,
                     right: 16,
-                    top: 12,
+                    top: 8,
                     bottom: MediaQuery.of(context).padding.bottom + 12,
                   ),
-                  child: Row(
-                    children: [
-                      // 清空草稿按钮
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _confirmClearDraft,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF666666),
-                            side: const BorderSide(color: Color(0xFFDDDDDD)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            '清空草稿',
-                            style: TextStyle(
-                              fontSize: 15,
-                            ),
-                          ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSubmitting ? null : _submitMarkdown,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // 发布按钮
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : _submitMarkdown,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEC4141),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                      icon: _isSubmitting
+                          ? const SizedBox.shrink()
+                          : Icon(_isEditing ? Icons.save_alt_outlined : Icons.publish_outlined),
+                      label: _isSubmitting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 3),
+                            )
+                          : Text(
+                              _isEditing ? '保存更新' : '确认发布',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                )
-                              : const Text(
-                                  '发布笔记',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
