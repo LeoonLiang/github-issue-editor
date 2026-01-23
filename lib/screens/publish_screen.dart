@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
@@ -443,6 +444,86 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     );
   }
 
+  /// 预览图片 Markdown
+  Future<void> _previewImagesMarkdown() async {
+    final uploadQueue = ref.read(uploadQueueProvider);
+    final successImages = uploadQueue.where((state) => state.isSuccess).toList();
+
+    if (successImages.isEmpty) {
+      _showErrorMessage('还没有上传成功的图片');
+      return;
+    }
+
+    // 生成所有图片的 Markdown
+    final markdownList = successImages.map((state) => state.result!.toMarkdown()).toList();
+    final allMarkdown = markdownList.join('\n\n');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.code),
+              const SizedBox(width: 8),
+              Text('图片 Markdown (${successImages.length} 张)'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            constraints: const BoxConstraints(maxHeight: 500),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: SelectableText(
+                      allMarkdown,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '提示：长按可选择和复制文本',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('关闭'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.copy, size: 18),
+              label: const Text('复制全部'),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: allMarkdown));
+                Navigator.of(context).pop();
+                _showSuccessMessage('已复制到剪贴板');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _submitMarkdown() async {
     if (_isSubmitting) return;
 
@@ -549,14 +630,15 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
   Widget build(BuildContext context) {
     final labelsAsync = ref.watch(labelsProvider);
 
-    // 监听上传队列变化，当图片上传成功时自动保存草稿
+    // 监听上传队列变化，当图片变化时自动保存草稿
     ref.listen<List<ImageUploadState>>(uploadQueueProvider, (previous, next) {
       if (_isEditing) return; // 编辑模式不自动保存
 
       final previousSuccess = previous?.where((s) => s.isSuccess).length ?? 0;
       final nextSuccess = next.where((s) => s.isSuccess).length;
 
-      if (nextSuccess > previousSuccess) {
+      // 只要成功图片数量有变化（增加或减少），就保存草稿
+      if (nextSuccess != previousSuccess) {
         _saveDraftSilently();
       }
     });
@@ -689,6 +771,11 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
                         icon: const Icon(Icons.videocam_outlined),
                         tooltip: '添加视频卡片',
                         onPressed: _showVideoInputDialog,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.code_outlined),
+                        tooltip: '预览图片 Markdown',
+                        onPressed: _previewImagesMarkdown,
                       ),
                     ],
                   ),
