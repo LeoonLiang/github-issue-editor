@@ -36,12 +36,12 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.feed_outlined),
             activeIcon: Icon(Icons.feed),
-            label: 'Feed',
+            label: '动态',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),
-            label: 'Settings',
+            label: '设置',
           ),
         ],
       ),

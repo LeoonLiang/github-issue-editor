@@ -341,7 +341,8 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
 
           return IssueCard(
             issue: filteredIssues[index],
-            onTap: () => _editIssue(filteredIssues[index]),
+            onEdit: () => _editIssue(filteredIssues[index]),
+            onQuickEdit: () => _quickEditIssue(filteredIssues[index]),
           );
         },
       ),
@@ -420,5 +421,112 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
       final params = IssuesParams(label: _selectedLabel, state: _selectedState);
       ref.read(issuesProvider(params).notifier).refresh();
     });
+  }
+
+  /// 快速编辑 Issue（查看和编辑 Markdown 源数据）
+  Future<void> _quickEditIssue(GitHubIssue issue) async {
+    final titleController = TextEditingController(text: issue.title);
+    final bodyController = TextEditingController(text: issue.body);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('快速编辑'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题编辑
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: '标题',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Markdown 源数据编辑
+                Text(
+                  'Markdown 源数据',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: bodyController,
+                  decoration: InputDecoration(
+                    hintText: '在这里编辑 Markdown 源数据...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 15,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // 如果用户点击了保存，更新 Issue
+    if (result == true) {
+      try {
+        final config = ref.read(configProvider);
+        final githubService = GitHubService(
+          owner: config.github.owner,
+          repo: config.github.repo,
+          token: config.github.token,
+        );
+
+        await githubService.updateIssue(
+          issue.number,
+          title: titleController.text,
+          body: bodyController.text,
+        );
+
+        // 刷新列表
+        final params = IssuesParams(label: _selectedLabel, state: _selectedState);
+        ref.read(issuesProvider(params).notifier).refresh();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('保存成功'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('保存失败: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+
+    titleController.dispose();
+    bodyController.dispose();
   }
 }

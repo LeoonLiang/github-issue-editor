@@ -4,16 +4,19 @@ import '../services/github.dart';
 import '../theme/app_colors.dart';
 import '../models/issue_image_info.dart';
 import 'image_grid_preview.dart';
+import 'image_preview_dialog.dart';
 
 /// Issue 卡片组件
 class IssueCard extends StatelessWidget {
   final GitHubIssue issue;
-  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onQuickEdit;
 
   const IssueCard({
     Key? key,
     required this.issue,
-    this.onTap,
+    this.onEdit,
+    this.onQuickEdit,
   }) : super(key: key);
 
   @override
@@ -29,12 +32,9 @@ class IssueCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 顶部：状态标签 + Issue 编号 + 时间
@@ -95,7 +95,7 @@ class IssueCard extends StatelessWidget {
                 SizedBox(height: 16),
                 ImageGridPreview(
                   images: images,
-                  onTap: onTap,
+                  onTap: () => _handleImagePreview(context, images),
                 ),
               ],
 
@@ -106,7 +106,6 @@ class IssueCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -123,7 +122,7 @@ class IssueCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        isOpen ? 'OPEN' : 'CLOSED',
+        isOpen ? '开放' : '已关闭',
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
@@ -161,7 +160,51 @@ class IssueCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // View Issue 按钮
+        // 编辑按钮
+        TextButton(
+          onPressed: onEdit,
+          style: TextButton.styleFrom(
+            foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: Size(0, 32),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            '编辑',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+
+        SizedBox(width: 8),
+
+        // 快速编辑按钮
+        TextButton(
+          onPressed: onQuickEdit,
+          style: TextButton.styleFrom(
+            foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: Size(0, 32),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            '快速编辑',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+
+        SizedBox(width: 8),
+
+        // 查看详情按钮
         ElevatedButton(
           onPressed: () => _handleViewIssue(),
           style: ElevatedButton.styleFrom(
@@ -177,7 +220,7 @@ class IssueCard extends StatelessWidget {
             ),
           ),
           child: Text(
-            'View Issue',
+            '查看详情',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -196,6 +239,14 @@ class IssueCard extends StatelessWidget {
     }
   }
 
+  /// 处理图片预览
+  void _handleImagePreview(BuildContext context, List<IssueImageInfo> images) {
+    showDialog(
+      context: context,
+      builder: (context) => ImagePreviewDialog(images: images),
+    );
+  }
+
   /// 获取相对时间
   String _getTimeAgo(String createdAt) {
     try {
@@ -205,18 +256,18 @@ class IssueCard extends StatelessWidget {
 
       if (difference.inDays > 365) {
         final years = (difference.inDays / 365).floor();
-        return '$years ${years == 1 ? "year" : "years"} ago';
+        return '$years 年前';
       } else if (difference.inDays > 30) {
         final months = (difference.inDays / 30).floor();
-        return '$months ${months == 1 ? "month" : "months"} ago';
+        return '$months 个月前';
       } else if (difference.inDays > 0) {
-        return '${difference.inDays} ${difference.inDays == 1 ? "day" : "days"} ago';
+        return '${difference.inDays} 天前';
       } else if (difference.inHours > 0) {
-        return '${difference.inHours} ${difference.inHours == 1 ? "hour" : "hours"} ago';
+        return '${difference.inHours} 小时前';
       } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes} ${difference.inMinutes == 1 ? "minute" : "minutes"} ago';
+        return '${difference.inMinutes} 分钟前';
       } else {
-        return 'Just now';
+        return '刚刚';
       }
     } catch (e) {
       return '';
