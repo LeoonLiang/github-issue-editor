@@ -494,8 +494,9 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
 
         await githubService.updateGitHubIssue(
           issue.number,
-          title: titleController.text,
-          body: bodyController.text,
+          titleController.text,
+          bodyController.text,
+          issue.labels,
         );
 
         // 刷新列表
