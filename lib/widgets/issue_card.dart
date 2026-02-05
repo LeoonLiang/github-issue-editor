@@ -37,8 +37,9 @@ class IssueCard extends StatelessWidget {
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 顶部：状态标签 + Issue 编号 + 时间
+            // 顶部：状态标签 + Issue 编号 + 标签 + 时间
               Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // 状态标签
                   _buildStateLabel(issue.state, isDark),
@@ -47,6 +48,19 @@ class IssueCard extends StatelessWidget {
                   // Issue 编号
                   _buildIssueNumberLabel(issue.number, isDark),
 
+                // 标签列表
+                if (issue.labels.isNotEmpty) ...[
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: issue.labels
+                          .map((label) => _buildLabel(label, isDark))
+                          .toList(),
+                    ),
+                  ),
+                ] else
                   Spacer(),
 
                   // 时间戳
@@ -95,7 +109,7 @@ class IssueCard extends StatelessWidget {
                 SizedBox(height: 16),
                 ImageGridPreview(
                   images: images,
-                  onTap: () => _handleImagePreview(context, images),
+                onTap: (index) => _handleImagePreview(context, images, index),
                 ),
               ],
 
@@ -155,33 +169,48 @@ class IssueCard extends StatelessWidget {
     );
   }
 
+  /// 构建标签
+  Widget _buildLabel(String label, bool isDark) {
+    // 为不同标签生成不同颜色
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.pink,
+      Colors.teal,
+      Colors.amber,
+      Colors.cyan,
+    ];
+    final colorIndex = label.hashCode.abs() % colors.length;
+    final color = colors[colorIndex];
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? color.withOpacity(0.3) : color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isDark ? color.withOpacity(0.5) : color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: isDark ? color.shade300 : color.shade700,
+        ),
+      ),
+    );
+  }
+
   /// 构建底部操作栏
   Widget _buildActionBar(BuildContext context, bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // 编辑按钮
-        TextButton(
-          onPressed: onEdit,
-          style: TextButton.styleFrom(
-            foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            minimumSize: Size(0, 32),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: Text(
-            '编辑',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-
-        SizedBox(width: 8),
-
         // 快速编辑按钮
         TextButton(
           onPressed: onQuickEdit,
@@ -204,9 +233,9 @@ class IssueCard extends StatelessWidget {
 
         SizedBox(width: 8),
 
-        // 查看详情按钮
+        // 编辑按钮（优先级最高）
         ElevatedButton(
-          onPressed: () => _handleViewIssue(),
+          onPressed: onEdit,
           style: ElevatedButton.styleFrom(
             backgroundColor: isDark
                 ? AppColors.primaryDark.withOpacity(0.3)
@@ -220,7 +249,7 @@ class IssueCard extends StatelessWidget {
             ),
           ),
           child: Text(
-            '查看详情',
+            '编辑',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -240,10 +269,14 @@ class IssueCard extends StatelessWidget {
   }
 
   /// 处理图片预览
-  void _handleImagePreview(BuildContext context, List<IssueImageInfo> images) {
+  void _handleImagePreview(
+      BuildContext context, List<IssueImageInfo> images, int initialIndex) {
     showDialog(
       context: context,
-      builder: (context) => ImagePreviewDialog(images: images),
+      builder: (context) => ImagePreviewDialog(
+        images: images,
+        initialIndex: initialIndex,
+      ),
     );
   }
 

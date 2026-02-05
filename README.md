@@ -157,19 +157,90 @@ lib/
 
 ## 🔧 配置说明
 
-##***REMOVED*** 权限
+### 快速导入配置（推荐）
+
+为了方便快速配置，我们提供了配置模板文件。按照以下步骤操作：
+
+1. **复制配置模板**
+
+   打开项目根目录下的 `config.template.json` 文件，复制其内容：
+
+   ```json
+   {
+       "github": {
+           "owner": "your-github-username",
+           "repo": "your-repo-name",
+           "token": "ghp_your_github_personal_access_token_here"
+       },
+       "ossList": [
+           {
+               "name": "bitiful",
+               "endpoint": "https://s3.bitiful.net",
+               "region": "cn-east-1",
+               "accessKeyId": "your_bitiful_access_key_id",
+               "secretAccessKey": "your_bitiful_secret_access_key",
+               "bucket": "your-bucket-name",
+               "publicDomain": "",
+               "enabled": true
+           },
+           {
+               "name": "qiniu",
+               "endpoint": "https://s3.cn-south-1.qiniucs.com",
+               "region": "cn-south-1",
+               "accessKeyId": "your_qiniu_access_key_id",
+               "secretAccessKey": "your_qiniu_secret_access_key",
+               "bucket": "your-bucket-name",
+               "publicDomain": "",
+               "enabled": true
+           }
+       ],
+       "displayDomain": "https://your-domain.com"
+   }
+   ```
+
+2. **填写配置信息**
+
+   将模板中的占位符替换为您的实际信息：
+   - `your-github-username` → 您的 GitHub 用户名
+   - `your-repo-name` → 您的仓库名称
+   - `ghp_your_github_personal_access_token_here` → 您的 GitHub Token
+   - `your_bitiful_access_key_id` → Bitiful Access Key ID
+   - `your_bitiful_secret_access_key` → Bitiful Secret Access Key
+   - `your_qiniu_access_key_id` → 七牛云 Access Key ID
+   - `your_qiniu_secret_access_key` → 七牛云 Secret Access Key
+   - `your-bucket-name` → 您的存储桶名称
+   - `your-domain.com` → 您的图片回显域名
+
+3. **导入配置**
+
+   - 复制填写好的 JSON 配置
+   - 打开应用，进入**设置** → **维护** → **备份与恢复** → **导入配置**
+   - 粘贴 JSON 配置并导入
+
+   > 💡 **提示**：您可以根据实际需求删除或添加 OSS 配置项，支持多个对象存储服务。
+
+### GitHub 权限
 
 需要创建具有以下权限的 GitHub Personal Access Token：
 - `repo` - 完整的仓库访问权限（用于读写 Issues）
 
 创建 Token：[GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
 
-### AWS S3 配置
+### 对象存储配置
 
-用于存储上传的图片和视频文件：
-1. 创建 S3 Bucket 并设置为公开读取
-2. 创建 IAM 用户并授予 S3 上传权限
-3. 获取 Access Key 和 Secret Key
+本应用支持任何兼容 S3 API 的对象存储服务，包括但不限于：
+- AWS S3
+- Bitiful
+- 七牛云 S3
+- 阿里云 OSS（S3 兼容模式）
+- MinIO
+- 腾讯云 COS（S3 兼容模式）
+
+**配置要点：**
+1. 创建存储桶并设置为公开读取（或配置 CDN）
+2. 创建访问密钥（Access Key 和 Secret Key）
+3. 确保密钥具有上传文件的权限
+4. 配置正确的 Endpoint 和 Region
 
 ## 📱 支持平台
 

@@ -10,7 +10,7 @@ class SearchBarWidget extends StatelessWidget {
 
   const SearchBarWidget({
     Key? key,
-    this.hintText = 'Search issues...',
+    this.hintText = '搜索文章...',
     this.onChanged,
     this.onFilterPressed,
     this.controller,

@@ -76,6 +76,7 @@ class ImageGridWidget extends ConsumerWidget {
   /// 构建添加按钮
   Widget _buildAddButton(BuildContext context, WidgetRef ref, int currentCount) {
     final size = (MediaQuery.of(context).size.width - 32) / 3 - 8;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => _pickImages(context, ref, currentCount),
@@ -83,14 +84,18 @@ class ImageGridWidget extends ConsumerWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: isDark ? Color(0xFF2d3748) : Color(0xFFd1d5db),
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDark ? Color(0xFF4a5568) : Color(0xFFe5e7eb),
+            width: 1,
+          ),
         ),
         child: Center(
           child: Icon(
             Icons.add,
             size: 32,
-            color: const Color(0xFFBBBBBB),
+            color: isDark ? Color(0xFF9ca3af) : Color(0xFF6b7280),
           ),
         ),
       ),

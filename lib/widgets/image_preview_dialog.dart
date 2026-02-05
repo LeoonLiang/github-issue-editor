@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import '../models/issue_image_info.dart';
@@ -30,12 +31,22 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     _initializeVideoForCurrentImage();
+
+    // 隐藏状态栏，实现全屏沉浸式体验
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _videoController?.dispose();
+
+    // 恢复状态栏显示
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: SystemUiOverlay.values,
+    );
+
     super.dispose();
   }
 
@@ -93,6 +104,7 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
     return Dialog(
       backgroundColor: Colors.black,
       insetPadding: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // 无圆角
       child: Stack(
         children: [
           // 图片轮播
@@ -112,7 +124,7 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
 
           // 顶部关闭按钮和页码指示器
           Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
+            top: 8, // 状态栏已隐藏，无需额外 padding
             left: 0,
             right: 0,
             child: Row(
@@ -146,7 +158,7 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
           if (widget.images[_currentIndex].liveVideo != null &&
               widget.images[_currentIndex].liveVideo!.isNotEmpty)
             Positioned(
-              bottom: MediaQuery.of(context).padding.bottom + 32,
+              bottom: 32, // 底部导航栏已隐藏，无需额外 padding
               left: 0,
               right: 0,
               child: Center(

@@ -483,7 +483,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
                       return Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkCard : AppColors.lightBackground,
+                          color: isDark ? AppColors.darkCard : Color(0xFFe5e7eb),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isDark ? AppColors.darkBorder : AppColors.lightBorder,

@@ -7,7 +7,7 @@ import '../models/issue_image_info.dart';
 /// 九宫格图片预览组件
 class ImageGridPreview extends StatelessWidget {
   final List<IssueImageInfo> images;
-  final VoidCallback? onTap;
+  final Function(int)? onTap;
 
   const ImageGridPreview({
     Key? key,
@@ -85,90 +85,93 @@ class ImageGridPreview extends StatelessWidget {
 
     if (imageCount == 1) {
       return _buildSingleImage(context, images[0]);
-    } else if (imageCount <= 4) {
-      return _buildGrid2x2(context, images);
     } else {
-      return _buildGrid3x3(context, images.take(9).toList(), imageCount);
+      return _buildImageGrid(context, images, imageCount);
     }
   }
 
-  /// 单张图片（16:9 横向大图）
+  /// 单张图片（自适应比例）
   Widget _buildSingleImage(BuildContext context, IssueImageInfo image) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => onTap?.call(0),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: _buildImageWidget(image),
-        ),
-      ),
-    );
-  }
-
-  /// 2x2 网格
-  Widget _buildGrid2x2(BuildContext context, List<IssueImageInfo> images) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 2,
-          mainAxisSpacing: 2,
-        ),
-        itemCount: images.length,
-        itemBuilder: (context, index) {
-          return GestureDetector(
-            onTap: onTap,
-            child: _buildImageWidget(images[index]),
-          );
-        },
-      ),
-    );
-  }
-
-  /// 3x3 网格
-  Widget _buildGrid3x3(BuildContext context, List<IssueImageInfo> images, int totalCount) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 2,
-          mainAxisSpacing: 2,
-        ),
-        itemCount: images.length,
-        itemBuilder: (context, index) {
-          final isLastItem = index == images.length - 1 && totalCount > 9;
-
-          return GestureDetector(
-            onTap: onTap,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _buildImageWidget(images[index]),
-
-                // 显示 "+N" 蒙层
-                if (isLastItem)
-                  Container(
-                    color: Colors.black.withOpacity(0.6),
-                    child: Center(
-                      child: Text(
-                        '+${totalCount - 9}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width - 32, // 左右各16的padding
+            maxHeight: 300, // 最大高度限制
+          ),
+          child: CachedNetworkImage(
+            imageUrl: image.url,
+            fit: BoxFit.contain, // 保持比例，不裁剪
+            placeholder: (context, url) {
+              return Container(
+                color: Colors.grey[300],
+                child: Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            },
+            errorWidget: (context, url, error) => Container(
+              color: Colors.grey[300],
+              child: Icon(Icons.broken_image, color: Colors.grey[600]),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 图片网格（2列或3列）
+  Widget _buildImageGrid(BuildContext context, List<IssueImageInfo> images, int totalCount) {
+    final displayImages = images.take(9).toList();
+    final count = displayImages.length;
+    final column = count <= 4 ? 2 : 3;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final spacing = 2.0;
+          final size = (width - spacing * (column - 1)) / column;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: List.generate(count, (i) {
+              final isLastItem = i == count - 1 && totalCount > 9;
+
+              return SizedBox(
+                width: size,
+                height: size,
+                child: GestureDetector(
+                  onTap: () => onTap?.call(i),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildImageWidget(displayImages[i]),
+
+                      // 显示 "+N" 蒙层
+                      if (isLastItem)
+                        Container(
+                          color: Colors.black.withOpacity(0.6),
+                          child: Center(
+                            child: Text(
+                              '+${totalCount - 9}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }),
           );
         },
       ),
