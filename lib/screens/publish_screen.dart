@@ -13,6 +13,7 @@ import '../services/music.dart';
 import '../services/video.dart';
 import '../widgets/image_grid_widget.dart';
 import '../models/upload_models.dart';
+import '../theme/app_colors.dart';
 
 /// 发布页面
 class PublishScreen extends ConsumerStatefulWidget {
@@ -476,29 +477,42 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: SelectableText(
-                      allMarkdown,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkCard : AppColors.lightBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          ),
+                        ),
+                        child: SelectableText(
+                          allMarkdown,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                            height: 1.5,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    '提示：长按可选择和复制文本',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      return Text(
+                        '提示：长按可选择和复制文本',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -612,7 +626,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
       ),
     );
   }
@@ -621,7 +635,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
       ),
     );
   }
@@ -644,7 +658,6 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     });
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           _isEditing ? '编辑文章' : '发布文章',
@@ -714,13 +727,18 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
           ),
 
           // 底部操作区域
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              border: Border(
-                top: BorderSide(color: Colors.grey[200]!),
-              ),
-            ),
+          Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                    ),
+                  ),
+                ),
             child: Column(
               children: [
                 // 标签和工具栏
@@ -820,6 +838,8 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
                 ),
               ],
             ),
+              );
+            },
           ),
         ],
       ),
