@@ -133,47 +133,44 @@ class ImageGridPreview extends StatelessWidget {
   Widget _buildGrid3x3(BuildContext context, List<IssueImageInfo> images, int totalCount) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 2,
-            mainAxisSpacing: 2,
-          ),
-          itemCount: images.length,
-          itemBuilder: (context, index) {
-            final isLastItem = index == images.length - 1 && totalCount > 9;
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 2,
+          mainAxisSpacing: 2,
+        ),
+        itemCount: images.length,
+        itemBuilder: (context, index) {
+          final isLastItem = index == images.length - 1 && totalCount > 9;
 
-            return GestureDetector(
-              onTap: onTap,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildImageWidget(images[index]),
+          return GestureDetector(
+            onTap: onTap,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _buildImageWidget(images[index]),
 
-                  // 显示 "+N" 蒙层
-                  if (isLastItem)
-                    Container(
-                      color: Colors.black.withOpacity(0.6),
-                      child: Center(
-                        child: Text(
-                          '+${totalCount - 9}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                // 显示 "+N" 蒙层
+                if (isLastItem)
+                  Container(
+                    color: Colors.black.withOpacity(0.6),
+                    child: Center(
+                      child: Text(
+                        '+${totalCount - 9}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                ],
-              ),
-            );
-          },
-        ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

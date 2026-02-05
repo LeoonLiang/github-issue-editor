@@ -8,6 +8,7 @@ import '../providers/config_provider.dart';
 import '../models/app_config.dart';
 import '../services/version_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/oss_config_dialog.dart';
 
 /// 设置页面
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -48,22 +49,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('设置', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
-          // GitHub Configuration 分组
-          _buildSectionTitle('GitHub Configuration', isDark),
+          // GitHub 配置 分组
+          _buildSectionTitle('GitHub 配置', isDark),
           _buildSettingsCard(
             isDark: isDark,
             children: [
               _buildSettingItem(
                 icon: Icons.key,
                 iconColor: AppColors.primary,
-                title: 'GitHub Token',
-                subtitle: 'Manage your personal access token',
+                title: 'GitHub 令牌',
+                subtitle: '管理您的个人访问令牌',
                 onTap: () => _showGitHubConfigDialog(),
                 isDark: isDark,
               ),
@@ -71,12 +72,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildSettingItem(
                 icon: Icons.storage,
                 iconColor: AppColors.primary,
-                title: 'Repository',
+                title: '仓库',
                 subtitle: () {
                   final config = ref.watch(configProvider);
                   return config.github.isValid
                       ? '${config.github.owner}/${config.github.repo}'
-                      : 'Select issue storage repository';
+                      : '选择 Issue 存储仓库';
                 }(),
                 onTap: () => _showGitHubConfigDialog(),
                 isDark: isDark,
@@ -85,12 +86,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildSettingItem(
                 icon: Icons.image_search,
                 iconColor: AppColors.primary,
-                title: 'Display Domain',
+                title: '图片回显域名',
                 subtitle: () {
                   final config = ref.watch(configProvider);
                   return config.displayDomain.isNotEmpty
                       ? config.displayDomain
-                      : 'Configure image回显域名';
+                      : '配置图片回显域名';
                 }(),
                 onTap: () => _showDisplayDomainDialog(),
                 isDark: isDark,
@@ -100,19 +101,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Media Storage 分组
-          _buildSectionTitle('Media Storage', isDark),
+          // 媒体存储 分组
+          _buildSectionTitle('媒体存储', isDark),
           _buildSettingsCard(
             isDark: isDark,
             children: [
               _buildSettingItem(
                 icon: Icons.cloud_upload,
                 iconColor: AppColors.primary,
-                title: 'S3 Configuration',
+                title: '对象存储配置',
                 subtitle: () {
                   final ossList = ref.watch(configProvider).ossList;
                   final enabledCount = ossList.where((oss) => oss.enabled).length;
-                  return '${ossList.length} configs, $enabledCount enabled';
+                  return '${ossList.length}个配置, $enabledCount个已启用';
                 }(),
                 onTap: () => _showOSSConfigDialog(),
                 isDark: isDark,
@@ -122,16 +123,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Maintenance 分组
-          _buildSectionTitle('Maintenance', isDark),
+          // 维护 分组
+          _buildSectionTitle('维护', isDark),
           _buildSettingsCard(
             isDark: isDark,
             children: [
               _buildSettingItem(
                 icon: Icons.download,
                 iconColor: AppColors.primary,
-                title: 'Backup & Restore',
-                subtitle: 'Export or import your local configuration',
+                title: '备份与恢复',
+                subtitle: '导出或导入本地配置',
                 onTap: () => _showBackupRestoreDialog(),
                 isDark: isDark,
               ),
@@ -139,8 +140,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildSettingItem(
                 icon: Icons.update,
                 iconColor: AppColors.primary,
-                title: 'Check for Updates',
-                subtitle: 'Current version: v$_appVersion',
+                title: '检查更新',
+                subtitle: '当前版本: v$_appVersion',
                 onTap: _isCheckingUpdate ? null : _checkForUpdate,
                 isDark: isDark,
                 trailing: _isCheckingUpdate
@@ -156,8 +157,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // About 分组
-          _buildSectionTitle('About', isDark),
+          // 关于 分组
+          _buildSectionTitle('关于', isDark),
           _buildSettingsCard(
             isDark: isDark,
             children: [
@@ -165,7 +166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.info_outline,
                 iconColor: AppColors.primary,
                 title: 'GitHub Issue Editor',
-                subtitle: 'Version $_appVersion • Made by leoonliang',
+                subtitle: '版本 $_appVersion • 作者 leoonliang',
                 isDark: isDark,
                 showArrow: false,
               ),
@@ -173,7 +174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildSettingItem(
                 icon: Icons.open_in_browser,
                 iconColor: AppColors.primary,
-                title: 'Source Code',
+                title: '源代码',
                 subtitle: 'leoonliang/github-issue-editor',
                 onTap: () async {
                   final uri = Uri.parse('https://github.com/leoonliang/github-issue-editor');
@@ -438,16 +439,139 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   /// 显示 OSS 配置对话框
   void _showOSSConfigDialog() {
-    // 跳转到 OSS 配置页面（简化版：直接显示一个提示）
+    showDialog(
+      context: context,
+      builder: (context) {
+        // 使用 Consumer 来确保对话框内的列表能够响应状态变化
+        return Consumer(builder: (context, ref, child) {
+          final ossList = ref.watch(configProvider).ossList;
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Text('对象存储 (OSS)'),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () async {
+                    final result = await showDialog<OSSConfig>(
+                      context: context,
+                      builder: (context) => const OSSConfigDialog(),
+                    );
+                    if (result != null) {
+                      ref.read(configProvider.notifier).addOSSConfig(result);
+                    }
+                  },
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ossList.isEmpty
+                  ? const Center(child: Text('暂无配置'))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: ossList.length,
+                      itemBuilder: (context, index) {
+                        final oss = ossList[index];
+                        return _buildOSSItem(oss);
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('完成'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  /// 构建单个OSS配置项
+  Widget _buildOSSItem(OSSConfig oss) {
+    return ListTile(
+      title: Text(oss.name),
+      subtitle: Text(
+        '${oss.bucket} - ${oss.enabled ? "已启用" : "已禁用"}',
+        style: TextStyle(color: oss.enabled ? AppColors.success : Colors.grey),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Switch(
+            value: oss.enabled,
+            onChanged: (value) {
+              ref.read(configProvider.notifier).toggleOSSEnabled(oss.id);
+            },
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'edit') {
+                _editOSSConfig(oss);
+              } else if (value == 'delete') {
+                _deleteOSSConfig(oss);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'edit', child: Text('编辑')),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Text('删除', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 编辑OSS配置
+  Future<void> _editOSSConfig(OSSConfig oss) async {
+    final result = await showDialog<OSSConfig>(
+      context: context,
+      builder: (context) => OSSConfigDialog(config: oss),
+    );
+
+    if (result != null) {
+      await ref.read(configProvider.notifier).updateOSSConfig(oss.id, result);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('OSS 配置已更新'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 删除OSS配置
+  void _deleteOSSConfig(OSSConfig oss) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('OSS 配置'),
-        content: const Text('OSS 配置功能待实现'),
+        title: const Text('删除确认'),
+        content: Text('确定要删除 "${oss.name}" 吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(configProvider.notifier).deleteOSSConfig(oss.id);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('已删除'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('删除'),
           ),
         ],
       ),
