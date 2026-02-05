@@ -490,11 +490,7 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
     if (result == true) {
       try {
         final config = ref.read(configProvider);
-        final githubService = GitHubService(
-          owner: config.github.owner,
-          repo: config.github.repo,
-          token: config.github.token,
-        );
+        final githubService = GitHubService(config.github);
 
         await githubService.updateIssue(
           issue.number,
