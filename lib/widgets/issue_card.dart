@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/github.dart';
 import '../theme/app_colors.dart';
@@ -160,36 +159,8 @@ class IssueCard extends StatelessWidget {
   /// 构建底部操作栏
   Widget _buildActionBar(BuildContext context, bool isDark) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // 分享按钮
-        InkWell(
-          onTap: () => _handleShare(),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.share,
-                  size: 18,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'Share',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        Spacer(),
-
         // View Issue 按钮
         ElevatedButton(
           onPressed: () => _handleViewIssue(),
@@ -214,14 +185,6 @@ class IssueCard extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  /// 处理分享
-  void _handleShare() {
-    Share.share(
-      '${issue.title}\n\n${issue.htmlUrl}',
-      subject: issue.title,
     );
   }
 

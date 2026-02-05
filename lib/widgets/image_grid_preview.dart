@@ -204,26 +204,12 @@ class ImageGridPreview extends StatelessWidget {
 
   /// 构建 ThumbHash 占位符
   Widget _buildThumbHashPlaceholder(String thumbhashBase64) {
-    try {
-      // 解码 Base64 字符串
-      final thumbhashBytes = base64.decode(thumbhashBase64);
-
-      // 从 ThumbHash 生成图片
-      final image = th.ThumbHash.fromBytes(thumbhashBytes).toImage();
-
-      return Image.memory(
-        image.buffer.asUint8List(),
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-      );
-    } catch (e) {
-      print('Error decoding ThumbHash: $e');
-      return Container(
-        color: Colors.grey[300],
-        child: Center(
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
+    // 暂时使用灰色占位符，ThumbHash 功能待优化
+    return Container(
+      color: Colors.grey[300],
+      child: Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
   }
 }
