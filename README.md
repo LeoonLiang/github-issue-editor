@@ -11,7 +11,12 @@
 - **富文本编辑** - 支持 Markdown 格式编辑
 
 ### 🎨 媒体支持
-- **图片上传** - 支持多图上传至 AWS S3
+- **多种图床支持** - 支持 S3 兼容存储和 GitHub 图床
+  - AWS S3 / 阿里云 OSS / 七牛云 / Bitiful 等 S3 兼容服务
+  - GitHub 仓库作为图床（每张图片一个 commit）
+  - 支持多个图床同时启用，并行上传
+- **图片上传** - 支持多图上传，可独立启用/禁用不同图床
+- **相机拍照** - 支持相机拍照，拍照后可选择直接上传或编辑
 - **图片编辑** - 支持编辑已选择的图片（Pro Image Editor）
 - **九宫格展示** - 类朋友圈的图片网格布局
 - **拖拽排序** - 自由调整图片顺序
@@ -19,6 +24,7 @@
 - **实况照片** - 支持小米实况照片（编辑时保留原视频）
   > ⚠️ **注意**：Live Photo 功能目前仅支持小米手机的实况照片，其他品牌手机未经验证
 - **ThumbHash 预览** - 图片加载前显示模糊占位图
+- **自定义存储路径** - 可配置图片和视频的存储路径前缀
 
 ### 💾 实用功能
 - **草稿保存** - 自动保存文字和已上传图片
@@ -27,9 +33,11 @@
 - **配置导入导出** - 支持配置备份和恢复
 
 ### 🎨 设计风格
-- 采用红白配色方案
-- 简洁现代的 Material Design
-- 流畅的交互动画
+- **全新 iOS 风格 UI** - 采用 iOS 风格的底部抽屉设计
+- **主题系统** - 支持浅色、深色和跟随系统三种主题模式
+- **精致配色** - 红色主题色搭配专业的浅色/深色配色方案
+- **流畅动画** - 优化的交互动画和过渡效果
+- **现代设计** - 简洁现代的 Material Design
 
 
 ## 📝 输出格式
@@ -103,13 +111,24 @@
    - 仓库所有者
    - 仓库名称
 
-4. **配置 AWS S3（可选）**
+4. **配置图床（必选其一）**
 
-   如需使用图片上传功能，需配置 AWS S3：
+   本应用支持两种图床方式，至少需要配置一种：
+
+   **方式一：S3 兼容对象存储**
    - Access Key ID
    - Secret Access Key
    - Bucket 名称
    - Region
+   - Endpoint
+
+   **方式二：GitHub 图床**
+   - GitHub Token（需要 repo 权限）
+   - 仓库所有者
+   - 仓库名称
+   - 分支名称（默认 main）
+
+   > 💡 **提示**：两种方式可以同时启用，系统会并行上传到所有启用的图床
 
 5. **运行应用**
    ```bash
@@ -139,20 +158,35 @@ lib/
 ├── components/          # 可复用组件
 │   └── markdown_editor.dart
 ├── models/             # 数据模型
+│   ├── app_config.dart
+│   ├── issue_image_info.dart
+│   └── upload_models.dart
 ├── providers/          # Riverpod 状态管理
 │   ├── config_provider.dart
 │   ├── github_provider.dart
+│   ├── labels_provider.dart
+│   ├── theme_provider.dart
 │   └── upload_provider.dart
 ├── screens/            # 页面
 │   ├── issue_list_screen.dart
+│   ├── main_screen.dart
 │   ├── publish_screen.dart
 │   └── settings_screen.dart
 ├── services/           # 业务逻辑
 │   ├── github.dart
+│   ├── github_image_service.dart
 │   ├── imageProcessService.dart
 │   └── version_service.dart
+├── theme/              # 主题系统
+│   ├── app_colors.dart
+│   └── app_theme.dart
 └── widgets/            # 自定义组件
-    └── image_grid_widget.dart
+    ├── image_grid_preview.dart
+    ├── image_grid_widget.dart
+    ├── image_preview_dialog.dart
+    ├── issue_card.dart
+    ├── oss_config_dialog.dart
+    └── search_bar_widget.dart
 ```
 
 ## 🔧 配置说明
@@ -194,22 +228,46 @@ lib/
                "enabled": true
            }
        ],
-       "displayDomain": "https://your-domain.com"
+       "githubImage": {
+           "owner": "your-github-username",
+           "repo": "your-image-repo-name",
+           "token": "ghp_your_github_personal_access_token_here",
+           "branch": "main",
+           "enabled": true
+       },
+       "editor": {
+           "displayDomain": "https://your-domain.com",
+           "defaultLabel": "article",
+           "imagePrefix": "img",
+           "videoPrefix": "video"
+       }
    }
    ```
 
 2. **填写配置信息**
 
    将模板中的占位符替换为您的实际信息：
+
+   **GitHub 配置：**
    - `your-github-username` → 您的 GitHub 用户名
-   - `your-repo-name` → 您的仓库名称
+   - `your-repo-name` → 用于发布文章的仓库名称
    - `ghp_your_github_personal_access_token_here` → 您的 GitHub Token
+
+   **对象存储配置（可选）：**
    - `your_bitiful_access_key_id` → Bitiful Access Key ID
    - `your_bitiful_secret_access_key` → Bitiful Secret Access Key
    - `your_qiniu_access_key_id` → 七牛云 Access Key ID
    - `your_qiniu_secret_access_key` → 七牛云 Secret Access Key
    - `your-bucket-name` → 您的存储桶名称
-   - `your-domain.com` → 您的图片回显域名
+
+   **GitHub 图床配置（可选）：**
+   - `your-image-repo-name` → 用于存储图片的仓库名称
+   - GitHub Token 和用户名可与上面的 GitHub 配置相同
+
+   **编辑器配置：**
+   - `your-domain.com` → 您的图片回显域名（CDN 域名）
+   - `article` → 默认标签（发布时自动选择）
+   - `img` / `video` → 存储路径前缀（可自定义）
 
 3. **导入配置**
 
@@ -226,9 +284,13 @@ lib/
 
 创建 Token：[GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
 
-### 对象存储配置
+### 图床配置
 
-本应用支持任何兼容 S3 API 的对象存储服务，包括但不限于：
+本应用支持两种图床方式：
+
+#### 方式一：S3 兼容对象存储
+
+支持任何兼容 S3 API 的对象存储服务，包括但不限于：
 - AWS S3
 - Bitiful
 - 七牛云 S3
@@ -241,6 +303,27 @@ lib/
 2. 创建访问密钥（Access Key 和 Secret Key）
 3. 确保密钥具有上传文件的权限
 4. 配置正确的 Endpoint 和 Region
+
+#### 方式二：GitHub 图床
+
+使用 GitHub 仓库作为图床，适合小流量博客：
+
+**优点：**
+- ✅ 免费且稳定
+- ✅ 无需配置对象存储
+- ✅ 支持版本管理
+- ✅ 可通过 jsDelivr 等 CDN 加速
+
+**配置要点：**
+1. 创建专门的图片仓库（或使用现有仓库）
+2. 创建具有 `repo` 权限的 Personal Access Token
+3. 每次上传会创建一个 commit
+4. 图片 URL 格式：`https://raw.githubusercontent.com/owner/repo/branch/path/to/image.jpg`
+
+**使用建议：**
+- 图片数量较少时推荐使用 GitHub 图床
+- 图片数量较多或需要高速访问时推荐使用 S3 对象存储
+- 可以同时启用多个图床，系统会并行上传
 
 ## 📱 支持平台
 
@@ -275,6 +358,38 @@ lib/
 
 
 ## 📝 更新日志
+
+### v2.1.0 (2026-02-06)
+
+#### 🎨 UI 全面改版
+- ✨ 全新 iOS 风格底部抽屉设计
+- ✨ 完整的主题系统（浅色/深色/跟随系统）
+- ✨ 重新设计的文章列表页面
+- ✨ 优化的设置页面布局
+- ✨ 改进的图片预览体验（使用 PhotoViewGallery）
+
+#### 🌐 图床功能增强
+- ✨ **新增 GitHub 图床支持**，可将 GitHub 仓库作为图床使用
+- ✨ 支持 S3 和 GitHub 图床并行上传，任一成功即可
+- ✨ 支持独立启用/禁用不同的图床
+- ✨ **新增存储路径前缀配置**，支持自定义图片/视频存储路径
+- 🐛 修复单独使用 GitHub 图床时无法上传的问题
+
+#### 📸 相机与编辑
+- ✨ 新增相机拍照功能
+- ✨ 支持拍照后直接上传或编辑
+- ✨ 优化图片编辑流程
+
+#### 🏷️ 标签与筛选
+- ✨ 筛选功能重构，支持按标签筛选文章
+- ✨ 默认标签同步，发布时自动选择默认标签
+- ✨ 优化标签选择和图片上传体验
+
+#### 🐛 Bug 修复
+- 🐛 修复 updateGitHubIssue 参数传递问题
+- 🐛 修复 GitHubService 构造函数调用错误
+- 🐛 修复九宫格显示问题
+- 🐛 恢复完整 OSS 配置功能
 
 ### v2.0.1 (2026-01-22)
 - ✨ 新增图片编辑功能，支持编辑已选择的图片
