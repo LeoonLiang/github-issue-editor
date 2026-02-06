@@ -51,7 +51,8 @@ class ConfigNotifier extends StateNotifier<AppConfig> {
 
   /// 更新全局图片回显域名
   Future<void> updateDisplayDomain(String displayDomain) async {
-    final newConfig = state.copyWith(displayDomain: displayDomain);
+    final newEditor = state.editor.copyWith(displayDomain: displayDomain);
+    final newConfig = state.copyWith(editor: newEditor);
     await saveConfig(newConfig);
   }
 

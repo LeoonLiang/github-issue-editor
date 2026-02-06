@@ -2,30 +2,42 @@
 class AppConfig {
   final GitHubConfig github;
   final List<OSSConfig> ossList; // 支持多个OSS配置
-  final String displayDomain; // 全局图片回显域名
+  final EditorConfig editor; // 编辑器配置
 
   AppConfig({
     required this.github,
     required this.ossList,
-    this.displayDomain = '',
-  });
+    EditorConfig? editor,
+  }) : editor = editor ?? EditorConfig.empty();
 
   factory AppConfig.empty() {
     return AppConfig(
       github: GitHubConfig.empty(),
       ossList: [],
-      displayDomain: '',
+      editor: EditorConfig.empty(),
     );
   }
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
+    // 兼容旧数据：如果没有 editor 字段，但有 displayDomain 字段，则从旧结构迁移
+    EditorConfig editor;
+    if (json.containsKey('editor')) {
+      editor = EditorConfig.fromJson(json['editor']);
+    } else {
+      // 旧数据兼容
+      editor = EditorConfig(
+        displayDomain: json['displayDomain'] ?? '',
+        defaultLabel: '',
+      );
+    }
+
     return AppConfig(
       github: GitHubConfig.fromJson(json['github'] ?? {}),
       ossList: (json['ossList'] as List<dynamic>?)
               ?.map((e) => OSSConfig.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      displayDomain: json['displayDomain'] ?? '',
+      editor: editor,
     );
   }
 
@@ -33,23 +45,27 @@ class AppConfig {
     return {
       'github': github.toJson(),
       'ossList': ossList.map((e) => e.toJson()).toList(),
-      'displayDomain': displayDomain,
+      'editor': editor.toJson(),
     };
   }
 
   AppConfig copyWith({
     GitHubConfig? github,
     List<OSSConfig>? ossList,
-    String? displayDomain,
+    EditorConfig? editor,
   }) {
     return AppConfig(
       github: github ?? this.github,
       ossList: ossList ?? this.ossList,
-      displayDomain: displayDomain ?? this.displayDomain,
+      editor: editor ?? this.editor,
     );
   }
 
-  bool get isConfigured => github.isValid && ossList.any((oss) => oss.enabled);
+  /// 应用是否已配置（只需要 GitHub 配置即可）
+  bool get isConfigured => github.isValid;
+
+  /// 是否配置了对象存储
+  bool get hasOSSConfigured => ossList.any((oss) => oss.enabled);
 
   /// 获取所有启用的OSS配置
   List<OSSConfig> get enabledOSSList => ossList.where((oss) => oss.enabled).toList();
@@ -203,5 +219,47 @@ class OSSConfig {
         accessKeyId.isNotEmpty &&
         secretAccessKey.isNotEmpty &&
         bucket.isNotEmpty;
+  }
+}
+
+/// 编辑器配置
+class EditorConfig {
+  final String displayDomain; // 图片回显域名
+  final String defaultLabel; // 默认标签
+
+  EditorConfig({
+    this.displayDomain = '',
+    this.defaultLabel = '',
+  });
+
+  factory EditorConfig.empty() {
+    return EditorConfig(
+      displayDomain: '',
+      defaultLabel: '',
+    );
+  }
+
+  factory EditorConfig.fromJson(Map<String, dynamic> json) {
+    return EditorConfig(
+      displayDomain: json['displayDomain'] ?? '',
+      defaultLabel: json['defaultLabel'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'displayDomain': displayDomain,
+      'defaultLabel': defaultLabel,
+    };
+  }
+
+  EditorConfig copyWith({
+    String? displayDomain,
+    String? defaultLabel,
+  }) {
+    return EditorConfig(
+      displayDomain: displayDomain ?? this.displayDomain,
+      defaultLabel: defaultLabel ?? this.defaultLabel,
+    );
   }
 }

@@ -9,6 +9,7 @@ import 'dart:async';
 import '../providers/upload_provider.dart';
 import '../providers/github_provider.dart';
 import '../providers/labels_provider.dart';
+import '../providers/config_provider.dart';
 import '../services/github.dart';
 import '../services/music.dart';
 import '../services/video.dart';
@@ -29,7 +30,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
-  List<String> _selectedLabels = ['note'];
+  List<String> _selectedLabels = [];
   bool _isSubmitting = false;
   bool _isMusicLoading = false;
   bool _isVideoLoading = false;
@@ -76,7 +77,12 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
       final draftContent = prefs.getString('draft_content') ?? '';
       final draftLabelsJson = prefs.getString('draft_labels') ?? '';
       final draftImagesJson = prefs.getString('draft_images') ?? '';
-      final defaultLabel = prefs.getString('default_label');
+
+      // 从配置中读取默认标签
+      final config = ref.read(configProvider);
+      final defaultLabel = config.editor.defaultLabel.isNotEmpty
+          ? config.editor.defaultLabel
+          : '';
 
       if (draftTitle.isNotEmpty || draftContent.isNotEmpty) {
         setState(() {
@@ -89,17 +95,17 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
               _selectedLabels = labelsList.map((e) => e.toString()).toList();
             } catch (e) {
               // 如果解析失败，使用用户设置的默认标签
-              _selectedLabels = defaultLabel != null ? [defaultLabel] : [];
+              _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
             }
-          } else if (defaultLabel != null) {
+          } else {
             // 如果没有草稿标签，使用默认标签
-            _selectedLabels = [defaultLabel];
+            _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
           }
         });
-      } else if (defaultLabel != null) {
-        // 如果没有草稿但有默认标签，使用默认标签
+      } else {
+        // 如果没有草稿，使用默认标签
         setState(() {
-          _selectedLabels = [defaultLabel];
+          _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
         });
       }
 
@@ -177,7 +183,10 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     if (issue.labels.isNotEmpty) {
       _selectedLabels = List.from(issue.labels);
     } else {
-      _selectedLabels = ['note'];
+      // 如果 issue 没有标签，使用配置的默认标签
+      final config = ref.read(configProvider);
+      final defaultLabel = config.editor.defaultLabel;
+      _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
     }
 
     final List<ImageUploadState> imageStates = [];
@@ -618,7 +627,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
         await githubService.createGitHubIssue(
           title,
           markdownText,
-          _selectedLabels.isNotEmpty ? _selectedLabels.first : 'note',
+          _selectedLabels.isNotEmpty ? _selectedLabels.first : '',
         );
         _showSuccessMessage('发布成功！');
         await _clearDraft(); // 发布成功后清除草稿
@@ -659,8 +668,8 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     final selectedLabels = List<String>.from(_selectedLabels);
 
     // 读取默认标签
-    final prefs = await SharedPreferences.getInstance();
-    String? currentDefaultLabel = prefs.getString('default_label');
+    final config = ref.read(configProvider);
+    String currentDefaultLabel = config.editor.defaultLabel;
 
     final result = await showModalBottomSheet<List<String>>(
       context: context,
@@ -788,13 +797,29 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
                         },
                         onLongPress: () async {
                           // 设置为默认标签
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setString('default_label', label);
+                          final config = ref.read(configProvider);
+                          final newEditor =
+                              config.editor.copyWith(defaultLabel: label);
+                          final newConfig = config.copyWith(editor: newEditor);
+                          await ref
+                              .read(configProvider.notifier)
+                              .saveConfig(newConfig);
 
                           // 立即更新 UI
                           setModalState(() {
                             currentDefaultLabel = label;
                           });
+
+                          // 显示提示
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('已设置默认标签为: $label'),
+                                backgroundColor: AppColors.success,
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          }
                         },
                         child: Container(
                           margin: EdgeInsets.only(bottom: 12),

@@ -10,6 +10,7 @@ import 'package:path/path.dart' as path;
 import '../models/upload_models.dart';
 import '../models/issue_image_info.dart';
 import '../providers/upload_provider.dart';
+import '../providers/config_provider.dart';
 import '../screens/custom_image_picker.dart';
 import 'image_upload_card.dart';
 import 'image_preview_dialog.dart';
@@ -86,6 +87,8 @@ class ImageGridWidget extends ConsumerWidget {
   Widget _buildAddButton(BuildContext context, WidgetRef ref, int currentCount) {
     final size = (MediaQuery.of(context).size.width - 32) / 3 - 8;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final config = ref.watch(configProvider);
+    final hasOSS = config.hasOSSConfigured;
 
     return GestureDetector(
       onTap: () => _pickImages(context, ref, currentCount),
@@ -101,10 +104,27 @@ class ImageGridWidget extends ConsumerWidget {
           ),
         ),
         child: Center(
-          child: Icon(
-            Icons.add,
-            size: 32,
-            color: isDark ? Color(0xFF9ca3af) : Color(0xFF6b7280),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.add,
+                size: 32,
+                color: hasOSS
+                    ? (isDark ? Color(0xFF9ca3af) : Color(0xFF6b7280))
+                    : Colors.grey[400],
+              ),
+              if (!hasOSS) ...[
+                SizedBox(height: 4),
+                Text(
+                  '未配置OSS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -113,6 +133,26 @@ class ImageGridWidget extends ConsumerWidget {
 
   /// 选择图片 - 显示相册/相机选择
   Future<void> _pickImages(BuildContext context, WidgetRef ref, int currentCount) async {
+    final config = ref.read(configProvider);
+
+    // 检查是否配置了 OSS
+    if (!config.hasOSSConfigured) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('提示'),
+          content: const Text('图片上传功能需要配置对象存储（OSS），请先在设置中配置。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     // 显示选择对话框
     final choice = await showModalBottomSheet<String>(
       context: context,

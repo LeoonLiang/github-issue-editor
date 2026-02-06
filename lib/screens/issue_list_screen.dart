@@ -73,15 +73,8 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
                       _searchQuery = value;
                     });
                   },
+                  onFilterPressed: () => _showFilterBottomSheet(labelsState.labels, isDark),
                 ),
-
-                // 标签过滤器
-                labelsState.isLoading
-                    ? Container(
-                        height: 50,
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      )
-                    : _buildLabelFilter(['all', ...labelsState.labels], isDark),
 
                 // Issues 列表
                 Expanded(
@@ -162,115 +155,309 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
     );
   }
 
-  /// 标签过滤器
-  Widget _buildLabelFilter(List<String> labels, bool isDark) {
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: labels.length + 1, // +1 for state filter chips
-        separatorBuilder: (context, index) => SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          // State filter chips (Open/Closed)
-          if (index == 0) {
-            return Row(
-              children: [
-                _buildChip(
-                  label: '全部文章',
-                  isSelected: _selectedLabel == 'all' && _selectedState == 'all',
-                  onTap: () {
-                    setState(() {
-                      _selectedLabel = 'all';
-                      _selectedState = 'all';
-                    });
-                  },
-                  isDark: isDark,
+  /// 显示筛选底部抽屉
+  void _showFilterBottomSheet(List<String> labels, bool isDark) {
+    // 使用临时变量存储选择，只有点击"应用"时才更新实际状态
+    String tempState = _selectedState;
+    String tempLabel = _selectedLabel;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.6,
+            decoration: BoxDecoration(
+              color: isDark ? Color(0xFF101622).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 25,
+                  offset: Offset(0, -10),
                 ),
-                SizedBox(width: 8),
-                _buildChip(
-                  label: '开放中',
-                  icon: Icons.radio_button_checked,
-                  iconColor: AppColors.success,
-                  isSelected: _selectedState == 'open',
-                  onTap: () {
-                    setState(() {
-                      _selectedState = 'open';
-                    });
-                  },
-                  isDark: isDark,
-                ),
-                SizedBox(width: 8),
               ],
-            );
-          }
+            ),
+            child: Column(
+              children: [
+                // 拖动手柄
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
 
-          final label = labels[index - 1];
-          if (label == 'all') return SizedBox.shrink();
+                // 标题
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 16, 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        '筛选',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      Spacer(),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(Icons.close, size: 18),
+                          padding: EdgeInsets.zero,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-          return _buildChip(
-            label: label,
-            isSelected: _selectedLabel == label,
-            onTap: () {
-              setState(() {
-                _selectedLabel = label;
-              });
-            },
-            isDark: isDark,
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 状态筛选
+                        Text(
+                          '状态',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        _buildStateOptionsWithTemp(tempState, (newState) {
+                          setModalState(() {
+                            tempState = newState;
+                          });
+                        }, isDark),
+
+                        SizedBox(height: 24),
+
+                        // 标签筛选
+                        Text(
+                          '标签',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        _buildLabelOptionsWithTemp(labels, tempLabel, (newLabel) {
+                          setModalState(() {
+                            tempLabel = newLabel;
+                          });
+                        }, isDark),
+
+                        SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // 底部按钮
+                Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              tempState = 'all';
+                              tempLabel = 'all';
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            '重置',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // 应用临时选择到实际状态
+                            setState(() {
+                              _selectedState = tempState;
+                              _selectedLabel = tempLabel;
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            '应用',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  /// 构建单个 Chip
-  Widget _buildChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-    IconData? icon,
-    Color? iconColor,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : (isDark ? AppColors.darkCard : Colors.white),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
+  /// 构建状态选项（使用临时状态）
+  Widget _buildStateOptionsWithTemp(String tempState, Function(String) onChanged, bool isDark) {
+    final states = [
+      {'value': 'all', 'label': '全部', 'icon': Icons.apps},
+      {'value': 'open', 'label': '开放中', 'icon': Icons.radio_button_checked, 'iconColor': AppColors.success},
+      {'value': 'closed', 'label': '已关闭', 'icon': Icons.check_circle, 'iconColor': AppColors.lightTextSecondary},
+    ];
+
+    return Column(
+      children: states.map((state) {
+        final isSelected = tempState == state['value'];
+        return Container(
+          margin: EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary
-                : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                ? AppColors.primary.withOpacity(0.1)
+                : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              width: 2,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : (iconColor ?? (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
-              ),
-              SizedBox(width: 6),
-            ],
-            Text(
-              label,
+          child: ListTile(
+            leading: Icon(
+              state['icon'] as IconData,
+              color: isSelected
+                  ? AppColors.primary
+                  : (state['iconColor'] as Color? ?? (isDark ? Colors.white.withOpacity(0.7) : Colors.black.withOpacity(0.7))),
+            ),
+            title: Text(
+              state['label'] as String,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                fontSize: 16,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? AppColors.primary : (isDark ? Colors.white : Colors.black),
               ),
             ),
-          ],
+            trailing: isSelected ? Icon(Icons.check_circle, color: AppColors.primary) : null,
+            onTap: () {
+              onChanged(state['value'] as String);
+            },
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// 构建标签选项（使用临时状态）
+  Widget _buildLabelOptionsWithTemp(List<String> labels, String tempLabel, Function(String) onChanged, bool isDark) {
+    return Column(
+      children: [
+        // 全部标签选项
+        Container(
+          margin: EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: tempLabel == 'all'
+                ? AppColors.primary.withOpacity(0.1)
+                : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: tempLabel == 'all' ? AppColors.primary : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: ListTile(
+            title: Text(
+              '全部标签',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: tempLabel == 'all' ? FontWeight.bold : FontWeight.normal,
+                color: tempLabel == 'all' ? AppColors.primary : (isDark ? Colors.white : Colors.black),
+              ),
+            ),
+            trailing: tempLabel == 'all' ? Icon(Icons.check_circle, color: AppColors.primary) : null,
+            onTap: () {
+              onChanged('all');
+            },
+          ),
         ),
-      ),
+        // 具体标签选项
+        ...labels.map((label) {
+          final isSelected = tempLabel == label;
+          return Container(
+            margin: EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withOpacity(0.1)
+                  : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: ListTile(
+              title: Text(
+                '#$label',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? AppColors.primary : (isDark ? Colors.white : Colors.black),
+                ),
+              ),
+              trailing: isSelected ? Icon(Icons.check_circle, color: AppColors.primary) : null,
+              onTap: () {
+                onChanged(label);
+              },
+            ),
+          );
+        }).toList(),
+      ],
     );
   }
 
@@ -287,13 +474,20 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            '请先配置 GitHub 和 OSS',
+            '请先配置 GitHub',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           Text(
             '完成配置后即可开始管理文章',
             style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '（图片上传功能需要额外配置对象存储）',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[500],
+                ),
           ),
         ],
       ),

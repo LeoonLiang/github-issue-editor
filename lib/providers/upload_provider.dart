@@ -10,7 +10,7 @@ import 'config_provider.dart';
 final imageProcessServiceProvider = Provider<ImageProcessService>((ref) {
   final config = ref.watch(configProvider);
   final enabledOssList = config.enabledOSSList;
-  final displayDomain = config.displayDomain;
+  final displayDomain = config.editor.displayDomain;
   return ImageProcessService(enabledOssList, displayDomain);
 });
 
@@ -219,7 +219,7 @@ class EditorState {
   EditorState({
     this.title = '',
     this.content = '',
-    this.selectedLabel = 'note',
+    this.selectedLabel = '',
     this.useGrid = true,
   });
 

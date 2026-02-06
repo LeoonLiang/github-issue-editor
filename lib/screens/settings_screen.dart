@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import '../providers/config_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/labels_provider.dart';
 import '../models/app_config.dart';
 import '../services/version_service.dart';
 import '../theme/app_colors.dart';
@@ -62,39 +63,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             isDark: isDark,
             children: [
               _buildSettingItem(
-                icon: Icons.key,
-                iconColor: AppColors.primary,
-                title: 'GitHub 令牌',
-                subtitle: '管理您的个人访问令牌',
-                onTap: () => _showGitHubConfigDialog(),
-                isDark: isDark,
-              ),
-              _buildDivider(isDark),
-              _buildSettingItem(
                 icon: Icons.storage,
                 iconColor: AppColors.primary,
-                title: '仓库',
+                title: 'GitHub 仓库',
                 subtitle: () {
                   final config = ref.watch(configProvider);
                   return config.github.isValid
                       ? '${config.github.owner}/${config.github.repo}'
-                      : '选择 Issue 存储仓库';
+                      : '配置 GitHub 仓库和令牌';
                 }(),
                 onTap: () => _showGitHubConfigDialog(),
                 isDark: isDark,
               ),
-              _buildDivider(isDark),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // 编辑器配置 分组
+          _buildSectionTitle('编辑器配置', isDark),
+          _buildSettingsCard(
+            isDark: isDark,
+            children: [
               _buildSettingItem(
                 icon: Icons.image_search,
                 iconColor: AppColors.primary,
                 title: '图片回显域名',
                 subtitle: () {
                   final config = ref.watch(configProvider);
-                  return config.displayDomain.isNotEmpty
-                      ? config.displayDomain
+                  return config.editor.displayDomain.isNotEmpty
+                      ? config.editor.displayDomain
                       : '配置图片回显域名';
                 }(),
                 onTap: () => _showDisplayDomainDialog(),
+                isDark: isDark,
+              ),
+              _buildDivider(isDark),
+              _buildSettingItem(
+                icon: Icons.label,
+                iconColor: AppColors.primary,
+                title: '默认标签',
+                subtitle: () {
+                  final config = ref.watch(configProvider);
+                  return config.editor.defaultLabel.isNotEmpty
+                      ? config.editor.defaultLabel
+                      : '配置默认标签';
+                }(),
+                onTap: () => _showDefaultLabelDialog(),
                 isDark: isDark,
               ),
             ],
@@ -393,10 +408,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _DisplayDomainBottomSheet(
-        initialDomain: config.displayDomain,
+        initialDomain: config.editor.displayDomain,
         isDark: isDark,
         onSave: (domain) {
-          final newConfig = config.copyWith(displayDomain: domain);
+          final newEditor = config.editor.copyWith(displayDomain: domain);
+          final newConfig = config.copyWith(editor: newEditor);
+          ref.read(configProvider.notifier).saveConfig(newConfig);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('配置已保存'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 显示默认标签配置对话框
+  void _showDefaultLabelDialog() {
+    final config = ref.read(configProvider);
+    final labelsState = ref.read(labelsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (labelsState.labels.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('请先配置 GitHub 并加载标签'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _DefaultLabelBottomSheet(
+        initialLabel: config.editor.defaultLabel,
+        availableLabels: labelsState.labels,
+        isDark: isDark,
+        onSave: (label) {
+          final newEditor = config.editor.copyWith(defaultLabel: label);
+          final newConfig = config.copyWith(editor: newEditor);
           ref.read(configProvider.notifier).saveConfig(newConfig);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -2257,6 +2312,198 @@ class _DisplayDomainBottomSheetState extends State<_DisplayDomainBottomSheet> {
                   child: ElevatedButton(
                     onPressed: () {
                       widget.onSave(_domainController.text.trim());
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      '保存',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 默认标签配置底部弹窗
+class _DefaultLabelBottomSheet extends StatefulWidget {
+  final String initialLabel;
+  final List<String> availableLabels;
+  final bool isDark;
+  final Function(String) onSave;
+
+  const _DefaultLabelBottomSheet({
+    required this.initialLabel,
+    required this.availableLabels,
+    required this.isDark,
+    required this.onSave,
+  });
+
+  @override
+  State<_DefaultLabelBottomSheet> createState() => _DefaultLabelBottomSheetState();
+}
+
+class _DefaultLabelBottomSheetState extends State<_DefaultLabelBottomSheet> {
+  late String _selectedLabel;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLabel = widget.initialLabel;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Container(
+      height: screenHeight * 0.6,
+      decoration: BoxDecoration(
+        color: widget.isDark ? Color(0xFF101622).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 25,
+            offset: Offset(0, -10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // 拖动手柄
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+
+          // 标题
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 16, 16),
+            child: Row(
+              children: [
+                Text(
+                  '选择默认标签',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                Spacer(),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: widget.isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, size: 18),
+                    padding: EdgeInsets.zero,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 提示文字
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              '发布新文章时，会自动选择此标签',
+              style: TextStyle(
+                fontSize: 14,
+                color: widget.isDark ? Colors.white.withOpacity(0.6) : Colors.black.withOpacity(0.6),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 16),
+
+          // 标签列表
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              itemCount: widget.availableLabels.length,
+              itemBuilder: (context, index) {
+                final label = widget.availableLabels[index];
+                final isSelected = _selectedLabel == label;
+
+                return Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withOpacity(0.1)
+                        : (widget.isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? AppColors.primary : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      '#$label',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? AppColors.primary
+                            : (widget.isDark ? Colors.white : Colors.black),
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(Icons.check_circle, color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      setState(() {
+                        _selectedLabel = label;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // 保存按钮
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onSave(_selectedLabel);
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
