@@ -2,17 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import '../models/issue_image_info.dart';
+
+/// 上传链接数据（用于显示链接菜单）
+class UploadLinkData {
+  final String imageUrl;
+  final String? videoUrl;
+  final String markdown;
+
+  UploadLinkData({
+    required this.imageUrl,
+    this.videoUrl,
+    required this.markdown,
+  });
+}
 
 /// 图片预览对话框
 class ImagePreviewDialog extends StatefulWidget {
   final List<IssueImageInfo> images;
   final int initialIndex;
+  final UploadLinkData? uploadLinkData; // 可选的上传链接数据
 
   const ImagePreviewDialog({
     Key? key,
     required this.images,
     this.initialIndex = 0,
+    this.uploadLinkData,
   }) : super(key: key);
 
   @override
@@ -20,17 +37,15 @@ class ImagePreviewDialog extends StatefulWidget {
 }
 
 class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
-  late PageController _pageController;
   late int _currentIndex;
-  VideoPlayerController? _videoController;
-  bool _isPlayingLive = false;
+  bool _showLinksMenu = false; // 链接菜单显示状态
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    _initializeVideoForCurrentImage();
 
     // 隐藏状态栏，实现全屏沉浸式体验
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
@@ -39,7 +54,6 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
   @override
   void dispose() {
     _pageController.dispose();
-    _videoController?.dispose();
 
     // 恢复状态栏显示
     SystemChrome.setEnabledSystemUIMode(
@@ -50,55 +64,6 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
     super.dispose();
   }
 
-  /// 初始化当前图片的视频（如果有 Live Photo）
-  void _initializeVideoForCurrentImage() {
-    _videoController?.dispose();
-    _videoController = null;
-    _isPlayingLive = false;
-
-    final currentImage = widget.images[_currentIndex];
-    if (currentImage.liveVideo != null && currentImage.liveVideo!.isNotEmpty) {
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(currentImage.liveVideo!),
-      )..initialize().then((_) {
-          if (mounted) {
-            setState(() {});
-          }
-        });
-    }
-  }
-
-  /// 切换 Live Photo 播放
-  void _toggleLivePhoto() {
-    if (_videoController == null || !_videoController!.value.isInitialized) {
-      return;
-    }
-
-    setState(() {
-      if (_isPlayingLive) {
-        _videoController!.pause();
-        _videoController!.seekTo(Duration.zero);
-        _isPlayingLive = false;
-      } else {
-        _videoController!.play();
-        _isPlayingLive = true;
-      }
-    });
-
-    // 视频播放完成后自动回到图片
-    _videoController!.addListener(() {
-      if (_videoController!.value.position >= _videoController!.value.duration) {
-        if (mounted) {
-          setState(() {
-            _videoController!.seekTo(Duration.zero);
-            _videoController!.pause();
-            _isPlayingLive = false;
-          });
-        }
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -107,19 +72,34 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // 无圆角
       child: Stack(
         children: [
-          // 图片轮播
-          PageView.builder(
-            controller: _pageController,
+          // 图片轮播 - 使用 PhotoViewGallery 解决手势冲突和缩放重置
+          PhotoViewGallery.builder(
+            pageController: _pageController,
             itemCount: widget.images.length,
             onPageChanged: (index) {
               setState(() {
                 _currentIndex = index;
-                _initializeVideoForCurrentImage();
               });
             },
-            itemBuilder: (context, index) {
-              return _buildImagePage(widget.images[index]);
+            builder: (context, index) {
+              final image = widget.images[index];
+              return PhotoViewGalleryPageOptions.customChild(
+                child: _ImagePreviewItem(
+                  key: ValueKey(image.url),
+                  image: image,
+                ),
+                minScale: PhotoViewComputedScale.contained * 0.8,
+                maxScale: PhotoViewComputedScale.covered * 2.0,
+                initialScale: PhotoViewComputedScale.contained,
+              );
             },
+            scrollPhysics: const BouncingScrollPhysics(),
+            backgroundDecoration: const BoxDecoration(
+              color: Colors.transparent,
+            ),
+            loadingBuilder: (context, event) => const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
           ),
 
           // 顶部关闭按钮和页码指示器
@@ -149,111 +129,266 @@ class _ImagePreviewDialogState extends State<ImagePreviewDialog> {
                     ),
                   ),
                 ),
-                SizedBox(width: 16),
+                // 链接菜单按钮（仅在有上传链接数据时显示）
+                if (widget.uploadLinkData != null)
+                  IconButton(
+                    icon: Icon(
+                      _showLinksMenu ? Icons.expand_less : Icons.link,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showLinksMenu = !_showLinksMenu;
+                      });
+                    },
+                  ),
+                if (widget.uploadLinkData == null) SizedBox(width: 16),
               ],
             ),
           ),
 
-          // Live Photo 按钮
-          if (widget.images[_currentIndex].liveVideo != null &&
-              widget.images[_currentIndex].liveVideo!.isNotEmpty)
+          // 链接菜单（下拉展示）
+          if (_showLinksMenu && widget.uploadLinkData != null)
             Positioned(
-              bottom: 32, // 底部导航栏已隐藏，无需额外 padding
-              left: 0,
-              right: 0,
-              child: Center(
-                child: ElevatedButton.icon(
-                  onPressed: _toggleLivePhoto,
-                  icon: Icon(_isPlayingLive ? Icons.pause : Icons.play_arrow),
-                  label: Text(_isPlayingLive ? '暂停 Live' : '播放 Live'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                    foregroundColor: Colors.black,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+              top: 60,
+              right: 8,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 图片链接
+                    _buildLinkRow(
+                      icon: Icons.image,
+                      label: '图片链接',
+                      url: widget.uploadLinkData!.imageUrl,
                     ),
-                  ),
+                    // 视频链接（如果有）
+                    if (widget.uploadLinkData!.videoUrl != null &&
+                        widget.uploadLinkData!.videoUrl!.isNotEmpty) ...[
+                      const Divider(color: Colors.white24, height: 20),
+                      _buildLinkRow(
+                        icon: Icons.videocam,
+                        label: 'Live 视频',
+                        url: widget.uploadLinkData!.videoUrl!,
+                      ),
+                    ],
+                    const Divider(color: Colors.white24, height: 20),
+                    // Markdown
+                    _buildLinkRow(
+                      icon: Icons.code,
+                      label: 'Markdown',
+                      url: widget.uploadLinkData!.markdown,
+                    ),
+                  ],
                 ),
               ),
             ),
+
         ],
       ),
     );
   }
 
-  /// 构建单个图片页面
-  Widget _buildImagePage(IssueImageInfo image) {
-    return GestureDetector(
-      onTap: () {
-        // 如果有 Live Photo，点击播放/暂停
-        if (image.liveVideo != null && image.liveVideo!.isNotEmpty) {
-          _toggleLivePhoto();
-        }
-      },
-      child: Center(
-        child: Stack(
+  /// 构建单个链接行
+  Widget _buildLinkRow({
+    required IconData icon,
+    required String label,
+    required String url,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            // 静态图片
-            if (!_isPlayingLive)
-              InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: CachedNetworkImage(
-                  imageUrl: image.url,
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) => Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                  errorWidget: (context, url, error) => Center(
-                    child: Icon(Icons.broken_image, color: Colors.white, size: 64),
-                  ),
-                ),
+            Icon(icon, color: Colors.white70, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-
-            // Live Photo 视频
-            if (_isPlayingLive &&
-                _videoController != null &&
-                _videoController!.value.isInitialized)
-              Center(
-                child: AspectRatio(
-                  aspectRatio: _videoController!.value.aspectRatio,
-                  child: VideoPlayer(_videoController!),
-                ),
-              ),
-
-            // Live 标识
-            if (image.liveVideo != null &&
-                image.liveVideo!.isNotEmpty &&
-                !_isPlayingLive)
-              Positioned(
-                top: 16,
-                left: 16,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.album, color: Colors.white, size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        'LIVE',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () => _copyToClipboard(url),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    url,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.copy, color: Colors.white, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 复制到剪贴板
+  void _copyToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('已复制到剪贴板'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+}
+
+/// 单张图片预览组件（复用 photo_preview_page 的实现）
+class _ImagePreviewItem extends StatefulWidget {
+  final IssueImageInfo image;
+
+  const _ImagePreviewItem({
+    Key? key,
+    required this.image,
+  }) : super(key: key);
+
+  @override
+  State<_ImagePreviewItem> createState() => _ImagePreviewItemState();
+}
+
+class _ImagePreviewItemState extends State<_ImagePreviewItem> {
+  VideoPlayerController? _videoController;
+  bool _isPlayingVideo = false;
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  /// 长按播放视频
+  Future<void> _playVideo() async {
+    if (widget.image.liveVideo == null || widget.image.liveVideo!.isEmpty) {
+      return;
+    }
+
+    if (_videoController != null) {
+      await _videoController!.dispose();
+    }
+
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(widget.image.liveVideo!),
+    );
+    await _videoController!.initialize();
+
+    setState(() {
+      _isPlayingVideo = true;
+    });
+
+    await _videoController!.play();
+
+    _videoController!.addListener(() {
+      if (_videoController!.value.position >= _videoController!.value.duration) {
+        _stopVideo();
+      }
+    });
+  }
+
+  /// 停止播放视频
+  void _stopVideo() {
+    if (_videoController != null) {
+      _videoController!.pause();
+      _videoController!.seekTo(Duration.zero);
+      if (mounted) {
+        setState(() {
+          _isPlayingVideo = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLivePhoto = widget.image.liveVideo != null && widget.image.liveVideo!.isNotEmpty;
+
+    return GestureDetector(
+      onLongPress: isLivePhoto ? _playVideo : null,
+      onLongPressEnd: (_) => _stopVideo(),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 图片 - PhotoViewGallery 已提供缩放，这里只显示图片
+          if (!_isPlayingVideo)
+            CachedNetworkImage(
+              imageUrl: widget.image.url,
+              fit: BoxFit.contain,
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+              errorWidget: (context, url, error) => const Center(
+                child: Icon(Icons.broken_image, color: Colors.white, size: 64),
+              ),
+            ),
+
+          // 视频播放器
+          if (_isPlayingVideo && _videoController != null && _videoController!.value.isInitialized)
+            GestureDetector(
+              onTap: _stopVideo,
+              child: AspectRatio(
+                aspectRatio: _videoController!.value.aspectRatio,
+                child: VideoPlayer(_videoController!),
+              ),
+            ),
+
+          // Live 标识
+          if (isLivePhoto && !_isPlayingVideo)
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.album, color: Colors.white, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
