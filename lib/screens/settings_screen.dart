@@ -934,7 +934,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _buildActionOption(
                     isDark: isDark,
                     title: '导入配置',
-                    subtitle: '从剪贴板导入配置',
+                    subtitle: '从剪贴板导入配置（会覆盖当前配置）',
                     icon: Icons.download,
                     onTap: () {
                       Navigator.pop(context);

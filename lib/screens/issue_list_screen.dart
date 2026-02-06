@@ -5,7 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 import '../providers/config_provider.dart';
 import '../providers/github_provider.dart';
+import '../providers/labels_provider.dart';
 import '../services/github.dart';
+import '../models/app_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/issue_card.dart';
@@ -51,7 +53,7 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(configProvider);
-    final labelsAsync = ref.watch(labelsProvider);
+    final labelsState = ref.watch(labelsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -74,14 +76,12 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
                 ),
 
                 // 标签过滤器
-                labelsAsync.when(
-                  data: (labels) => _buildLabelFilter(['all', ...labels], isDark),
-                  loading: () => Container(
-                    height: 50,
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-                  error: (error, stack) => SizedBox.shrink(),
-                ),
+                labelsState.isLoading
+                    ? Container(
+                        height: 50,
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      )
+                    : _buildLabelFilter(['all', ...labelsState.labels], isDark),
 
                 // Issues 列表
                 Expanded(
@@ -433,17 +433,10 @@ class _IssueListScreenState extends ConsumerState<IssueListScreen> {
 
   /// 快速编辑 Issue（查看和编辑 Markdown 源数据）
   Future<void> _quickEditIssue(GitHubIssue issue) async {
-    // 获取可用标签列表
+    // 从缓存获取标签列表
+    final availableLabels = await ref.read(labelsProvider.notifier).getLabels();
     final config = ref.read(configProvider);
     final githubService = GitHubService(config.github);
-    List<String> availableLabels = [];
-
-    try {
-      availableLabels = await githubService.fetchGitHubLabels();
-    } catch (e) {
-      // 如果获取失败，使用空列表
-      print('Failed to fetch labels: $e');
-    }
 
     final result = await showModalBottomSheet<_QuickEditResult>(
       context: context,

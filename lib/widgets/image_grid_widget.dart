@@ -25,16 +25,13 @@ class ImageGridWidget extends ConsumerWidget {
             spacing: 8,
             runSpacing: 8,
             onReorder: (oldIndex, newIndex) {
-              // 由于添加按钮在第一个位置，需要调整索引
-              uploadNotifier.reorderImages(oldIndex - 1, newIndex - 1);
+              // 由于添加按钮在最后一个位置，需要确保不拖动添加按钮
+              if (oldIndex >= uploadStates.length || newIndex >= uploadStates.length) {
+                return; // 忽略添加按钮的拖动
+              }
+              uploadNotifier.reorderImages(oldIndex, newIndex);
             },
             children: [
-              // 添加图片按钮放在第一个
-              Container(
-                key: const ValueKey('add_button'),
-                width: (MediaQuery.of(context).size.width - 32) / 3 - 8,
-                child: _buildAddButton(context, ref, uploadStates.length),
-              ),
               // 已上传的图片
               ...uploadStates.map((uploadState) {
                 return Container(
@@ -61,6 +58,12 @@ class ImageGridWidget extends ConsumerWidget {
                   ),
                 );
               }).toList(),
+              // 添加图片按钮放在最后
+              Container(
+                key: const ValueKey('add_button'),
+                width: (MediaQuery.of(context).size.width - 32) / 3 - 8,
+                child: _buildAddButton(context, ref, uploadStates.length),
+              ),
             ],
           ),
         ] else
