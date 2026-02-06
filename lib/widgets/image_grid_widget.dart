@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reorderables/reorderables.dart';
-import 'package:video_player/video_player.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../models/upload_models.dart';
 import '../models/issue_image_info.dart';
 import '../providers/upload_provider.dart';
@@ -107,11 +111,50 @@ class ImageGridWidget extends ConsumerWidget {
     );
   }
 
-  /// 选择图片 - 使用自定义选择器
+  /// 选择图片 - 显示相册/相机选择
   Future<void> _pickImages(BuildContext context, WidgetRef ref, int currentCount) async {
+    // 显示选择对话框
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('从相册选择'),
+                onTap: () => Navigator.pop(context, 'album'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('拍照'),
+                onTap: () => Navigator.pop(context, 'camera'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('取消'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (choice == null) return;
+
+    if (choice == 'album') {
+      await _pickFromAlbum(context, ref, currentCount);
+    } else if (choice == 'camera') {
+      await _pickFromCamera(context, ref);
+    }
+  }
+
+  /// 从相册选择
+  Future<void> _pickFromAlbum(BuildContext context, WidgetRef ref, int currentCount) async {
     final uploadNotifier = ref.read(uploadQueueProvider.notifier);
 
-    // 不限制数量
     // 打开自定义图片选择器
     final List<SelectedImageInfo>? images = await Navigator.push<List<SelectedImageInfo>>(
       context,
@@ -126,6 +169,142 @@ class ImageGridWidget extends ConsumerWidget {
     if (images == null || images.isEmpty) return;
 
     await uploadNotifier.addImagesWithLiveOptions(images);
+  }
+
+  /// 从相机拍照
+  Future<void> _pickFromCamera(BuildContext context, WidgetRef ref) async {
+    final uploadNotifier = ref.read(uploadQueueProvider.notifier);
+    final picker = ImagePicker();
+
+    try {
+      // 调用相机拍照
+      final XFile? photo = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+      );
+
+      if (photo == null) return;
+
+      // 询问用户是否需要编辑
+      final shouldEdit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('拍照成功'),
+          content: const Text('是否需要编辑这张照片？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('直接使用'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('编辑'),
+            ),
+          ],
+        ),
+      );
+
+      File finalFile = File(photo.path);
+
+      // 如果需要编辑，打开编辑器
+      if (shouldEdit == true && context.mounted) {
+        bool isEditingComplete = false;
+
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProImageEditor.file(
+              finalFile,
+              configs: ProImageEditorConfigs(
+                i18n: const I18n(
+                  various: I18nVarious(
+                    loadingDialogMsg: '请稍等...',
+                    closeEditorWarningTitle: '关闭编辑器？',
+                    closeEditorWarningMessage: '确定要关闭编辑器吗？您的更改将不会被保存。',
+                    closeEditorWarningConfirmBtn: '确定',
+                    closeEditorWarningCancelBtn: '取消',
+                  ),
+                  paintEditor: I18nPaintEditor(
+                    bottomNavigationBarText: '画笔',
+                    back: '返回',
+                    done: '完成',
+                    lineWidth: '线宽',
+                    changeOpacity: '调整透明度',
+                    moveAndZoom: '缩放',
+                  ),
+                  textEditor: I18nTextEditor(
+                    bottomNavigationBarText: '文字',
+                    inputHintText: '输入文字',
+                    back: '返回',
+                    done: '完成',
+                  ),
+                  cropRotateEditor: I18nCropRotateEditor(
+                    bottomNavigationBarText: '裁剪/旋转',
+                    rotate: '旋转',
+                    ratio: '比例',
+                    back: '返回',
+                    done: '完成',
+                  ),
+                  filterEditor: I18nFilterEditor(
+                    bottomNavigationBarText: '滤镜',
+                    back: '返回',
+                    done: '完成',
+                  ),
+                  blurEditor: I18nBlurEditor(
+                    bottomNavigationBarText: '模糊',
+                    back: '返回',
+                    done: '完成',
+                  ),
+                ),
+              ),
+              callbacks: ProImageEditorCallbacks(
+                onImageEditingComplete: (Uint8List bytes) async {
+                  if (isEditingComplete) return;
+                  isEditingComplete = true;
+
+                  try {
+                    // 保存编辑后的图片到临时文件
+                    final tempDir = await getTemporaryDirectory();
+                    final fileName = 'camera_edited_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                    final filePath = path.join(tempDir.path, fileName);
+                    final file = File(filePath);
+                    await file.writeAsBytes(bytes);
+
+                    finalFile = file;
+
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  } catch (e) {
+                    print('保存编辑失败: $e');
+                    isEditingComplete = false;
+                  }
+                },
+              ),
+            ),
+          ),
+        );
+      }
+
+      // 上传图片
+      if (context.mounted) {
+        final result = SelectedImageInfo(
+          file: XFile(finalFile.path),
+          isLivePhoto: false,
+          enableLiveVideo: false,
+          isVideo: false,
+        );
+
+        await uploadNotifier.addImagesWithLiveOptions([result]);
+      }
+    } catch (e) {
+      print('Error picking from camera: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('拍照失败: $e')),
+        );
+      }
+    }
   }
 
   /// 显示删除确认对话框
