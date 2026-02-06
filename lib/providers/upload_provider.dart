@@ -10,8 +10,17 @@ import 'config_provider.dart';
 final imageProcessServiceProvider = Provider<ImageProcessService>((ref) {
   final config = ref.watch(configProvider);
   final enabledOssList = config.enabledOSSList;
-  final displayDomain = config.displayDomain;
-  return ImageProcessService(enabledOssList, displayDomain);
+  final displayDomain = config.editor.displayDomain;
+  final imagePrefix = config.editor.imagePrefix;
+  final videoPrefix = config.editor.videoPrefix;
+  final githubImage = config.githubImage;
+  return ImageProcessService(
+    enabledOssList,
+    displayDomain,
+    imagePrefix,
+    videoPrefix,
+    githubImageConfig: githubImage,
+  );
 });
 
 /// 上传队列状态管理
@@ -219,7 +228,7 @@ class EditorState {
   EditorState({
     this.title = '',
     this.content = '',
-    this.selectedLabel = 'note',
+    this.selectedLabel = '',
     this.useGrid = true,
   });
 

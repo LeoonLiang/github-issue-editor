@@ -11,15 +11,26 @@ import 'package:path/path.dart' as path;
 import '../models/upload_models.dart';
 import '../models/app_config.dart';
 import 'ossService.dart';
+import 'github_image_service.dart';
 import 'image_edit_service.dart';
 
 /// 图片处理服务 - 负责图片压缩、thumbhash 生成、实况照片处理等
 class ImageProcessService {
   final OssService _ossService = OssService();
+  final GitHubImageService _githubImageService = GitHubImageService();
   final List<OSSConfig> _enabledOssList;
+  final GitHubImageConfig? _githubImageConfig;
   final String _displayDomain;
+  final String _imagePrefix;
+  final String _videoPrefix;
 
-  ImageProcessService(this._enabledOssList, this._displayDomain);
+  ImageProcessService(
+    this._enabledOssList,
+    this._displayDomain,
+    this._imagePrefix,
+    this._videoPrefix, {
+    GitHubImageConfig? githubImageConfig,
+  }) : _githubImageConfig = githubImageConfig;
 
   /// 生成指定长度的随机字符串
   String _generateRandomString(int length) {
@@ -29,6 +40,64 @@ class ImageProcessService {
       length,
       (_) => chars.codeUnitAt(random.nextInt(chars.length)),
     ));
+  }
+
+  /// 统一上传接口：同时支持 S3 和 GitHub 上传
+  /// 返回上传结果 Map，key 为存储名称，value 为文件 URL
+  Future<Map<String, String>> _uploadFile(
+    String filePath,
+    String fileName, {
+    String fileType = 'image/jpeg',
+  }) async {
+    final results = <String, String>{};
+    final errors = <String, String>{};
+
+    // 上传到 S3（如果有启用的 OSS）
+    if (_enabledOssList.isNotEmpty) {
+      try {
+        print('>>> 开始上传到 S3...');
+        final ossResults = await _ossService.uploadFileToS3(
+          filePath,
+          fileName,
+          _enabledOssList,
+          fileType: fileType,
+        );
+        results.addAll(ossResults);
+        print('✓ S3 上传成功，URL数量: ${ossResults.length}');
+      } catch (e) {
+        print('!!! S3 上传失败: $e');
+        errors['S3'] = e.toString();
+      }
+    }
+
+    // 上传到 GitHub（如果已配置且启用）
+    if (_githubImageConfig != null &&
+        _githubImageConfig!.enabled &&
+        _githubImageConfig!.isValid) {
+      try {
+        print('>>> 开始上传到 GitHub...');
+        final githubUrl = await _githubImageService.uploadToGitHub(
+          filePath,
+          fileName,
+          _githubImageConfig!,
+        );
+        results['GitHub'] = githubUrl;
+        print('✓ GitHub 上传成功');
+      } catch (e) {
+        print('!!! GitHub 上传失败: $e');
+        errors['GitHub'] = e.toString();
+      }
+    }
+
+    // 如果所有方式都失败，抛出异常
+    if (results.isEmpty) {
+      final errorDetails =
+          errors.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+      throw Exception('所有上传方式均失败:\n$errorDetails');
+    }
+
+    print('>>> 上传完成，成功数: ${results.length}/${results.length + errors.length}');
+    return results;
   }
 
   /// 提取实况照片的静态图片
@@ -142,14 +211,13 @@ class ImageProcessService {
         print('目标文件名: $originalFileName');
 
         print('开始上传视频文件...');
-        final videoUrls = await _ossService.uploadFileToS3(
+        final videoUrls = await _uploadFile(
           originalFile.path,
-          'video/$originalFileName',
-          _enabledOssList,
+          '$_videoPrefix/$originalFileName',
           fileType: 'video/mp4',
         );
         if (videoUrls.isNotEmpty) {
-          final videoUrl = _selectBestUrl(videoUrls, 'video/$originalFileName');
+          final videoUrl = _selectBestUrl(videoUrls, '$_videoPrefix/$originalFileName');
           print('视频上传成功: $videoUrl');
 
           // 获取视频尺寸（可选）
@@ -212,17 +280,16 @@ class ImageProcessService {
         // 图片部分：直接上传编辑后的图片
         final editedImageFile = File(image.path);
         print('开始上传编辑后的图片...');
-        final imageUrls = await _ossService.uploadFileToS3(
+        final imageUrls = await _uploadFile(
           editedImageFile.path,
-          'img/$randomStr.jpg',
-          _enabledOssList,
+          '$_imagePrefix/$randomStr.jpg',
         );
 
         if (imageUrls.isEmpty) {
           throw Exception('图片上传失败：所有OSS均上传失败');
         }
 
-        imageUrl = _selectBestUrl(imageUrls, 'img/$randomStr.jpg');
+        imageUrl = _selectBestUrl(imageUrls, '$_imagePrefix/$randomStr.jpg');
         finalImageFile = editedImageFile;
         print('编辑后图片上传成功: $imageUrl');
 
@@ -237,14 +304,13 @@ class ImageProcessService {
         print('提取视频文件: ${motionVideoFile.path}');
 
         print('开始上传实况照片视频部分...');
-        final videoUrls = await _ossService.uploadFileToS3(
+        final videoUrls = await _uploadFile(
           motionVideoFile.path,
-          'video/$randomStr.mp4',
-          _enabledOssList,
+          '$_videoPrefix/$randomStr.mp4',
           fileType: 'video/mp4',
         );
         if (videoUrls.isNotEmpty) {
-          videoUrl = _selectBestUrl(videoUrls, 'video/$randomStr.mp4');
+          videoUrl = _selectBestUrl(videoUrls, '$_videoPrefix/$randomStr.mp4');
           print('视频上传成功: $videoUrl');
         } else {
           print('!!! 视频上传失败');
@@ -285,14 +351,13 @@ class ImageProcessService {
 
         if (motionImageFile != null) {
           print('开始上传实况照片图片部分...');
-          final imageUrls = await _ossService.uploadFileToS3(
+          final imageUrls = await _uploadFile(
             motionImageFile.path,
-            'img/$randomStr.jpg',
-            _enabledOssList,
+            '$_imagePrefix/$randomStr.jpg',
           );
           // 使用智能选择，优先选择有公网域名的URL
           if (imageUrls.isNotEmpty) {
-            imageUrl = _selectBestUrl(imageUrls, 'img/$randomStr.jpg');
+            imageUrl = _selectBestUrl(imageUrls, '$_imagePrefix/$randomStr.jpg');
             finalImageFile = motionImageFile;
             print('图片上传成功: $imageUrl');
           } else {
@@ -301,15 +366,14 @@ class ImageProcessService {
         }
 
         print('开始上传实况照片视频部分...');
-        final videoUrls = await _ossService.uploadFileToS3(
+        final videoUrls = await _uploadFile(
           motionVideoFile.path,
-          'video/$randomStr.mp4',
-          _enabledOssList,
+          '$_videoPrefix/$randomStr.mp4',
           fileType: 'video/mp4',
         );
         // 使用智能选择，优先选择有公网域名的URL
         if (videoUrls.isNotEmpty) {
-          videoUrl = _selectBestUrl(videoUrls, 'video/$randomStr.mp4');
+          videoUrl = _selectBestUrl(videoUrls, '$_videoPrefix/$randomStr.mp4');
           print('视频上传成功: $videoUrl');
         } else {
           throw Exception('视频上传失败：所有OSS均上传失败');
@@ -335,13 +399,12 @@ class ImageProcessService {
 
           if (motionImageFile != null) {
             print('开始上传静态图片...');
-            final imageUrls = await _ossService.uploadFileToS3(
+            final imageUrls = await _uploadFile(
               motionImageFile.path,
-              'img/$randomStr.jpg',
-              _enabledOssList,
+              '$_imagePrefix/$randomStr.jpg',
             );
             if (imageUrls.isNotEmpty) {
-              imageUrl = _selectBestUrl(imageUrls, 'img/$randomStr.jpg');
+              imageUrl = _selectBestUrl(imageUrls, '$_imagePrefix/$randomStr.jpg');
               finalImageFile = motionImageFile;
               print('图片上传成功: $imageUrl');
             } else {
@@ -365,13 +428,12 @@ class ImageProcessService {
           print('目标文件名: $originalFileName');
 
           print('开始上传普通图片...');
-          final imageUrls = await _ossService.uploadFileToS3(
+          final imageUrls = await _uploadFile(
             originalFile.path,
-            'img/$originalFileName',
-            _enabledOssList,
+            '$_imagePrefix/$originalFileName',
           );
           if (imageUrls.isNotEmpty) {
-            imageUrl = _selectBestUrl(imageUrls, 'img/$originalFileName');
+            imageUrl = _selectBestUrl(imageUrls, '$_imagePrefix/$originalFileName');
             finalImageFile = originalFile;
             print('图片上传成功: $imageUrl');
           } else {

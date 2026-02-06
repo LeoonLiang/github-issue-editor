@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d59f2",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark overflow-x-hidden border-x border-slate-200 dark:border-slate-800">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center p-4 pb-2 justify-between">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="User avatar profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCtPUBvNxT_uZben-8VH_OiD6MZ-f0O58V54DSZVTlpwTWJl0dhygi4RxgPdhJSQqpIWhi55rjvHupkDwKcXN7y63YHE_aMIApQFmQG_B485MftuKvpUK0Gd1MG6H4PtzubvqBf60NzvTuAmIGXr4KRY-nknKnM9LllqHYhOS4HVQpnjn9qn2sSnGAM6V0zCYDvbr1fMaN3_jhzPcWfiCDfom0FkoOSJwtKOlh-YplUTS0bk1iFVyK39hZ0yHVyuYvVlDAsoKxXrCg");'></div>
+</div>
+<div class="flex-1 text-center">
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">Blog Feed</h2>
+<p class="text-slate-500 dark:text-slate-400 text-xs">repo: user/blog-repo</p>
+</div>
+<div class="flex w-12 items-center justify-end">
+<button class="flex cursor-pointer items-center justify-center rounded-full h-10 w-10 bg-primary text-white transition-transform active:scale-95">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</header>
+<!-- SearchBar -->
+<div class="px-4 py-3 flex gap-2">
+<label class="flex flex-col min-w-0 h-11 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm">
+<div class="text-slate-400 flex border-none bg-white dark:bg-[#1b2333] items-center justify-center pl-4 rounded-l-xl">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-0 border-none bg-white dark:bg-[#1b2333] h-full placeholder:text-slate-400 px-3 text-sm font-normal" placeholder="Search issues..." value=""/>
+</div>
+</label>
+<button class="flex shrink-0 items-center justify-center rounded-xl h-11 w-11 bg-white dark:bg-[#1b2333] text-slate-500 dark:text-slate-400 shadow-sm">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+<!-- Chips / Filters -->
+<div class="flex gap-3 px-4 pb-4 overflow-x-auto no-scrollbar">
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary text-white px-4">
+<p class="text-sm font-semibold">All Posts</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-[#1b2333] text-slate-600 dark:text-slate-300 px-4 border border-slate-200 dark:border-slate-800">
+<span class="material-symbols-outlined text-[16px] text-green-500">radio_button_checked</span>
+<p class="text-sm font-medium">Open</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-[#1b2333] text-slate-600 dark:text-slate-300 px-4 border border-slate-200 dark:border-slate-800">
+<p class="text-sm font-medium">Design</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-[#1b2333] text-slate-600 dark:text-slate-300 px-4 border border-slate-200 dark:border-slate-800">
+<p class="text-sm font-medium">Updates</p>
+</div>
+</div>
+<!-- Blog Feed Items -->
+<div class="flex flex-col gap-4 px-4 pb-20">
+<!-- Post Card 1 -->
+<div class="flex flex-col rounded-xl bg-white dark:bg-[#1b2333] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold uppercase tracking-wider">Open</span>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">#124</span>
+</div>
+<p class="text-slate-400 text-xs">2 hours ago</p>
+</div>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight mb-2">The Evolution of Minimalist Architecture</h3>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-4 line-clamp-2">Exploring how simplicity in design creates more functional spaces and better mental clarity for inhabitants...</p>
+<!-- 9-Grid Layout -->
+<div class="grid grid-cols-3 gap-1 rounded-lg overflow-hidden aspect-square mb-4">
+<div class="bg-center bg-cover aspect-square" data-alt="Modern building exterior" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD3gm7Q3btPJA1SfnsZw87OUcJilWrGQ1wboOv4ymDViSrDW2BE4ackHOcOQ_wqRNCZgm0wKrKDc1yKZeVPCyLEUNExkDgsw0E1qgXgOUhi5ut23rDDKFVuq_8KvXeqUO_hO7g6t2N32kIuZHYy0GH_MsOlbynws0lq5I1xRRjr0bV1FvpOwg9NjcHloAaXMEuYLAaKWf74yNcQ0ZQOlsq-Zu6fomsA87KiP5o0ef_CroHfACohvs5ks64qdXCyP_ESuo_Imv6CZRI");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Minimalist interior design" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBnXaePLP2u1O47eOC21w8Is1NANO4tsY9kpN0Yh-Dwz3Js1l79t9ppiyuR9J6QAfoOBS3YmEEdojHRi0zUwQ5XenwGweLfXL69kDUoZV8on2ti5NvdsPqoKFdmwWycgJaY71ij6axskDXqxKxARdXvXT-Uqhf1DYGMFowLhjP17T9dwsb3n8nH0tJXfw-IdpTnIhSSLp2nzuM4O_hvVq9yZHtUnoE7Apml9r0l_smR_9Fd7e7ul3zRYX6hN77fLDhqYkqljHfoBew");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Concrete wall texture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuACHt0F0ov0fUkUUT-auzvqKTXvHx2G1DbIDrKJwW69Zkg-9DvigRUdWUSS-m9Q0HyCWugpMEWSO4PrijxmM-AeW_H2l4dGvVSTTCX1ufC3Q78cVYDevdzOOvyFJNDrRA7tEIBoYb6cY53htlNbvgyHbcY9IBNTqNj59z0Km2Ezic4C4zo1a5gwWzee1kh6c3yoiIoUa38ExkWgHIKiJJ7_ceWZdHyDveJ79qBwrketK9z-dd8NkuqljEyK6PnaYQWsQOtzIwweS3s");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Large glass windows" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD7jVMzn3G1cT10dgx4q0tT3qAkKlRAkfFOy_V3usWScVnDjcxbedfLM6vMhgQKXNyl1fivDWDUJ-q46frRDJE6IY3piLWwYzYTfzG-GuU4d_achebgreopiIrfCfhHh8bE6wLeOQpLYjz9SdtUvnqPci6Be_W559AnbZdFmLdffxzOY1E2C5fjWW7sditRecc6SAOWTKSjoC6nud43MaINTgc-0bRNvUDajISq9V8SCB8Cq7n_250OAWcev4jgAHrKLtYs21tEevk");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Architectural blueprint" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAgXMP_7wAvRYpsA1nrt4I0r-LO7nn3JkRTh9Bh_Bu0BwPQvHNo3UKnfgcLJy-8Ekc1VDZ3rlHyM4-HpOeGzbZDGLONXzYVNoCvAcrLQfYk_qUxvrJLDWn_K8GLEdlb0aDi0rQ70yHV2N_sV3-Hv_jE7JbAdfC3rnzNhlmrAxWwhbM2ItwcHa9JwBI12cp06aUV-6TbH0tYYm5qIx0roJ6DOffN9zv8o9wbVPCqm9qQXnUL8sHTAVqJpVeBUWKps4wYf3Z-RkpBebU");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Natural lighting in room" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD7J1JOK7Zmbc3qs7LOA-tq0gre5BxJ4k6XhgA-d-_g8IwSzkjUM47kpDB81L3Cu4h2JMUc6LgpapBaxVC50CAUkcwKiBOuy6k-jaylzy_RZ9pZDlRy4Jj4H6NAkraqJCHLcBy8zW-B7Zu2eX9Yoy4eQ9B5hxCjPRuWIr64_Qqyh9AmmeXazpI3_FdzEXu1irWqaY7_O24E7lLhTtrsmgCJAZA3WEKJn8jzoNfQY7IJZbZgl9arr2DKYNBPY3rxPI5cztpxRlm1oic");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Zen garden view" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAjNJVK13sB6Sg1MMPF-V9uICGRerUNdkoNmNld91luZEpdO7qkQQA0MO3o7dhU-99XGpTnS0_AFWI2swqGYqPIflDs5cwBdSK3tlteUaMVC6XVBcVYKJZrBXLf5aP0_5tory2ZmgwfZtnOLiF0--HW9mi7WZ_DyXmxwFExA-plImhKUBxO0ZO0v452BFrn_hFmDx_b3VT-YeeEoa-ZiD9IBX0E5Dz1mift_6D8GaWtBQO21WnsGUSyiGNX3B6VAotg8SyDuj7ElQ8");'></div>
+<div class="bg-center bg-cover aspect-square" data-alt="Simple wooden furniture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA0UARHSe1fOkdDzfoVttBlTBC8koGPLkO1qYTnw61KrLHZLU64FRqn0m7zqSlB7QatOIAR9bygFuIPgPi9Bdjh8FFOZma4_BpQiEit7W2vuiXHkGUZZ1IiUvvmLDBmrCdk2BKtWNsARboInygb1swG5NKlaOlRVQ5iYXVWfHhuREe2DMHolpN9BLVqaA-wX2qyXqmtxzw5Aj2AtMIBfxcGKuuhpEEldh67J8hOTCnQgQlxEn1gVA89xmWtADCQJ_X9Yq8U8P6ypGg");'></div>
+<div class="bg-center bg-cover aspect-square flex items-center justify-center relative" data-alt="More architectural photos" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCSID7reJaTRkKO1plY036li6PS5apIO253KECMbBBrS5AZs2d1-2I2BPDOtlgt3SxV93aZGA-82OJXTyRgummjAOwyjB1-KXHWPQlqoKgGMnYVxmu-_KJ857zWzSZWCNCtZm6W47e94Uxy_Rvbjzr4u4GqD7W7vZGN5eC5rT9yZBUW3DDRd1NWWAt74cJxsBfSbtjbTdqJGCFdLPckh5dHgK5Jvbp9mymNU3ty7Cv1Pte-QtnQRYP8CkY2y8-0H4h-OkB0Y1i4yAM");'>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+<span class="text-white font-bold">+12</span>
+</div>
+</div>
+</div>
+<!-- ActionsBar Integrated -->
+<div class="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
+<div class="flex gap-4">
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">chat_bubble</span>
+<span class="text-xs font-semibold">24</span>
+</div>
+<div class="flex items-center gap-1.5 text-pink-500">
+<span class="material-symbols-outlined text-[20px] fill-current">favorite</span>
+<span class="text-xs font-semibold">156</span>
+</div>
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">share</span>
+<span class="text-xs font-semibold">Share</span>
+</div>
+</div>
+<button class="bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-primary hover:text-white">View Issue</button>
+</div>
+</div>
+</div>
+<!-- Post Card 2 -->
+<div class="flex flex-col rounded-xl bg-white dark:bg-[#1b2333] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Closed</span>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">#121</span>
+</div>
+<p class="text-slate-400 text-xs">Yesterday</p>
+</div>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight mb-2">The Future of AI in Mobile Interfaces</h3>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-4">How generative UI is changing the way we interact with our handheld devices on a daily basis...</p>
+<!-- Single Image Display -->
+<div class="rounded-lg overflow-hidden aspect-[16/9] mb-4 bg-center bg-cover" data-alt="Abstract AI interface concept" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAaP-UqeC9IXZHieWfeoN47YgMnbA7iPBPaACcU1iZDWRkzKIRF8OBpAtovNcUC-ULYVOfpPY-Uhb3bT18Ani3R8n4AMTx6dWeK-UpExcsllih_jIDJvi1gNAAT5zSppTypnKtLI9897k1uw0BawfoyBWewwAMmMDGxlHwHb09TEVgXbXwsm2wJvkYK4uVAeEm6JjJxWHH5CJJq17PdyFy-an_Q0m4afgfEhV3QH4tiQB-jLJ76Cdam9orw_LQWfPKrq7x9t7lRNF4");'></div>
+<div class="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
+<div class="flex gap-4">
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">chat_bubble</span>
+<span class="text-xs font-semibold">42</span>
+</div>
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+<span class="text-xs font-semibold">89</span>
+</div>
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">share</span>
+<span class="text-xs font-semibold">Share</span>
+</div>
+</div>
+<button class="bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-bold">View Thread</button>
+</div>
+</div>
+</div>
+<!-- Infinite Scroll Loader Mock -->
+<div class="py-6 flex flex-col items-center justify-center gap-3">
+<div class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+<p class="text-slate-400 text-xs font-medium">Loading more issues...</p>
+</div>
+</div>
+<!-- Navigation Bar (iOS Style) -->
+<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 dark:bg-[#1b2333]/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex justify-between items-center z-50">
+<div class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined">feed</span>
+<span class="text-[10px] font-bold">Feed</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">label</span>
+<span class="text-[10px] font-medium">Labels</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-[10px] font-medium">Activity</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</div>
+</div>
+</div>
+</body></html>

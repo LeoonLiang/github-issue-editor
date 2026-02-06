@@ -8,11 +8,14 @@ import 'dart:convert';
 import 'dart:async';
 import '../providers/upload_provider.dart';
 import '../providers/github_provider.dart';
+import '../providers/labels_provider.dart';
+import '../providers/config_provider.dart';
 import '../services/github.dart';
 import '../services/music.dart';
 import '../services/video.dart';
 import '../widgets/image_grid_widget.dart';
 import '../models/upload_models.dart';
+import '../theme/app_colors.dart';
 
 /// 发布页面
 class PublishScreen extends ConsumerStatefulWidget {
@@ -27,7 +30,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
-  String _selectedLabel = 'note';
+  List<String> _selectedLabels = [];
   bool _isSubmitting = false;
   bool _isMusicLoading = false;
   bool _isVideoLoading = false;
@@ -72,14 +75,37 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
       final prefs = await SharedPreferences.getInstance();
       final draftTitle = prefs.getString('draft_title') ?? '';
       final draftContent = prefs.getString('draft_content') ?? '';
-      final draftLabel = prefs.getString('draft_label') ?? 'note';
+      final draftLabelsJson = prefs.getString('draft_labels') ?? '';
       final draftImagesJson = prefs.getString('draft_images') ?? '';
+
+      // 从配置中读取默认标签
+      final config = ref.read(configProvider);
+      final defaultLabel = config.editor.defaultLabel.isNotEmpty
+          ? config.editor.defaultLabel
+          : '';
 
       if (draftTitle.isNotEmpty || draftContent.isNotEmpty) {
         setState(() {
           _titleController.text = draftTitle;
           _contentController.text = draftContent;
-          _selectedLabel = draftLabel;
+          // 解析保存的标签列表
+          if (draftLabelsJson.isNotEmpty) {
+            try {
+              final List<dynamic> labelsList = jsonDecode(draftLabelsJson);
+              _selectedLabels = labelsList.map((e) => e.toString()).toList();
+            } catch (e) {
+              // 如果解析失败，使用用户设置的默认标签
+              _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
+            }
+          } else {
+            // 如果没有草稿标签，使用默认标签
+            _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
+          }
+        });
+      } else {
+        // 如果没有草稿，使用默认标签
+        setState(() {
+          _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
         });
       }
 
@@ -153,8 +179,14 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
 
     _contentController.text = contentText;
 
+    // 使用 issue 的所有标签
     if (issue.labels.isNotEmpty) {
-      _selectedLabel = issue.labels.first;
+      _selectedLabels = List.from(issue.labels);
+    } else {
+      // 如果 issue 没有标签，使用配置的默认标签
+      final config = ref.read(configProvider);
+      final defaultLabel = config.editor.defaultLabel;
+      _selectedLabels = defaultLabel.isNotEmpty ? [defaultLabel] : [];
     }
 
     final List<ImageUploadState> imageStates = [];
@@ -232,7 +264,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('draft_title', _titleController.text);
       await prefs.setString('draft_content', _contentController.text);
-      await prefs.setString('draft_label', _selectedLabel);
+      await prefs.setString('draft_labels', jsonEncode(_selectedLabels));
 
       // 保存已上传成功的图片
       await _saveDraftImages(prefs);
@@ -260,7 +292,7 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('draft_title', _titleController.text);
       await prefs.setString('draft_content', _contentController.text);
-      await prefs.setString('draft_label', _selectedLabel);
+      await prefs.setString('draft_labels', jsonEncode(_selectedLabels));
 
       // 保存已上传成功的图片
       await _saveDraftImages(prefs);
@@ -476,29 +508,42 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: SelectableText(
-                      allMarkdown,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkCard : Color(0xFFe5e7eb),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          ),
+                        ),
+                        child: SelectableText(
+                          allMarkdown,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                            height: 1.5,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    '提示：长按可选择和复制文本',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      return Text(
+                        '提示：长按可选择和复制文本',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -574,15 +619,15 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
           widget.issue!.number,
           title,
           markdownText,
-          [_selectedLabel], // 假设只支持单标签
+          _selectedLabels,
         );
         _showSuccessMessage('更新成功！');
       } else {
-        // 创建 Issue
+        // 创建 Issue - 使用第一个标签作为主标签
         await githubService.createGitHubIssue(
           title,
           markdownText,
-          _selectedLabel,
+          _selectedLabels.isNotEmpty ? _selectedLabels.first : '',
         );
         _showSuccessMessage('发布成功！');
         await _clearDraft(); // 发布成功后清除草稿
@@ -612,23 +657,325 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
       ),
     );
+  }
+
+  /// 显示标签多选底部抽屉
+  Future<void> _showLabelSelector(List<String> allLabels) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedLabels = List<String>.from(_selectedLabels);
+
+    // 读取默认标签
+    final config = ref.read(configProvider);
+    String currentDefaultLabel = config.editor.defaultLabel;
+
+    final result = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: BoxDecoration(
+              color: isDark ? Color(0xFF101622).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 25,
+                  offset: Offset(0, -10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // 拖动手柄
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 大标题 + 关闭按钮
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 16, 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        '选择标签',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      Spacer(),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(Icons.close, size: 18),
+                          padding: EdgeInsets.zero,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 提示文本和清空按钮
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Text(
+                        '已选择 ${selectedLabels.length} 个标签',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.white.withOpacity(0.6) : Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                      Spacer(),
+                      if (selectedLabels.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              selectedLabels.clear();
+                            });
+                          },
+                          child: Text(
+                            '清空',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 16),
+
+                // 标签列表
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: allLabels.length,
+                    itemBuilder: (context, index) {
+                      final label = allLabels[index];
+                      final isSelected = selectedLabels.contains(label);
+
+                      return GestureDetector(
+                        onTap: () {
+                          setModalState(() {
+                            if (isSelected) {
+                              selectedLabels.remove(label);
+                            } else {
+                              selectedLabels.add(label);
+                            }
+                          });
+                        },
+                        onLongPress: () async {
+                          // 设置为默认标签
+                          final config = ref.read(configProvider);
+                          final newEditor =
+                              config.editor.copyWith(defaultLabel: label);
+                          final newConfig = config.copyWith(editor: newEditor);
+                          await ref
+                              .read(configProvider.notifier)
+                              .saveConfig(newConfig);
+
+                          // 立即更新 UI
+                          setModalState(() {
+                            currentDefaultLabel = label;
+                          });
+
+                          // 显示提示
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('已设置默认标签为: $label'),
+                                backgroundColor: AppColors.success,
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
+                          margin: EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withOpacity(0.15)
+                                : (isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1)),
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '# $label',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : (isDark ? Colors.white : Colors.black),
+                                      ),
+                                    ),
+                                    if (label == currentDefaultLabel) ...[
+                                      SizedBox(width: 8),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          '默认',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(
+                                  Icons.check_circle,
+                                  color: AppColors.primary,
+                                  size: 24,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // 提示文字
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text(
+                    '💡 长按标签可设为默认',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white.withOpacity(0.5) : Colors.black.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+
+                // 底部按钮
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            '取消',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, selectedLabels),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            '确定',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLabels = result;
+      });
+    }
   }
 
   void _showErrorMessage(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final labelsAsync = ref.watch(labelsProvider);
+    final labelsState = ref.watch(labelsProvider);
 
     // 监听上传队列变化，当图片变化时自动保存草稿
     ref.listen<List<ImageUploadState>>(uploadQueueProvider, (previous, next) {
@@ -644,7 +991,6 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
     });
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           _isEditing ? '编辑文章' : '发布文章',
@@ -714,13 +1060,18 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
           ),
 
           // 底部操作区域
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              border: Border(
-                top: BorderSide(color: Colors.grey[200]!),
-              ),
-            ),
+          Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                    ),
+                  ),
+                ),
             child: Column(
               children: [
                 // 标签和工具栏
@@ -728,38 +1079,52 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      // 标签选择
+                      // 标签选择（多选）
                       Expanded(
-                        child: labelsAsync.when(
-                          data: (labels) {
-                            if (labels.isEmpty) {
-                              return const Text('无可用标签');
-                            }
-                            if (!labels.contains(_selectedLabel)) {
-                              _selectedLabel = labels.first;
-                            }
-                            return DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedLabel,
-                                items: labels.map((label) {
-                                  return DropdownMenuItem(
-                                    value: label,
-                                    child: Text('# $label'),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      _selectedLabel = value;
-                                    });
-                                  }
-                                },
-                              ),
-                            );
-                          },
-                          loading: () => const Text('加载标签...'),
-                          error: (e, s) => const Text('加载标签失败'),
-                        ),
+                        child: labelsState.isLoading
+                            ? const Text('加载标签...')
+                            : labelsState.labels.isEmpty
+                                ? const Text('无可用标签')
+                                : Builder(
+                                    builder: (context) {
+                                      final labels = labelsState.labels;
+                                      return GestureDetector(
+                                        onTap: () => _showLabelSelector(labels),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  _selectedLabels.isEmpty
+                                                      ? '选择标签'
+                                                      : _selectedLabels.map((l) => '#$l').join(', '),
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: isDark ? Colors.white : Colors.black,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Icon(
+                                                Icons.arrow_drop_down,
+                                                color: isDark ? Colors.white.withOpacity(0.7) : Colors.black.withOpacity(0.7),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                       ),
                       // 媒体按钮
                       IconButton(
@@ -820,6 +1185,8 @@ class _PublishScreenState extends ConsumerState<PublishScreen> {
                 ),
               ],
             ),
+              );
+            },
           ),
         ],
       ),

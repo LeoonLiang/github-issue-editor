@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings &amp; Configuration</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d59f2",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+<!-- TopAppBar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="text-primary dark:text-white flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined cursor-pointer">arrow_back_ios</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Settings</h2>
+</div>
+<div class="flex flex-col flex-1 overflow-y-auto pb-10">
+<!-- GitHub Configuration Section -->
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">GitHub Configuration</h3>
+<div class="flex items-center gap-4 bg-white dark:bg-[#1a212e] px-4 min-h-[72px] py-2 justify-between border-b border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-4">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined">key</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal line-clamp-1">GitHub Token</p>
+<p class="text-slate-500 dark:text-[#9ca6ba] text-sm font-normal leading-normal line-clamp-2">Manage your personal access token</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="text-slate-400 dark:text-white flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-[#1a212e] px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined">database</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal line-clamp-1">Repository</p>
+<p class="text-slate-500 dark:text-[#9ca6ba] text-sm font-normal leading-normal line-clamp-2">Select issue storage repository</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="text-slate-400 dark:text-white flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Media Storage Section -->
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-8">Media Storage</h3>
+<div class="flex items-center gap-4 bg-white dark:bg-[#1a212e] px-4 min-h-[72px] py-2 justify-between border-b border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-4">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined">cloud_upload</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal line-clamp-1">S3 Configuration</p>
+<p class="text-slate-500 dark:text-[#9ca6ba] text-sm font-normal leading-normal line-clamp-2">Configure AWS S3 or compatible storage</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="text-slate-400 dark:text-white flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-[#1a212e] px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined">image</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal line-clamp-1">Upload Preferences</p>
+<p class="text-slate-500 dark:text-[#9ca6ba] text-sm font-normal leading-normal line-clamp-2">Compression and naming formats</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="text-slate-400 dark:text-white flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Backup & System Section -->
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-8">Maintenance</h3>
+<div class="flex items-center gap-4 bg-white dark:bg-[#1a212e] px-4 min-h-[72px] py-2 justify-between border-b border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-4">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined">settings_backup_restore</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal line-clamp-1">Backup &amp; Restore</p>
+<p class="text-slate-500 dark:text-[#9ca6ba] text-sm font-normal leading-normal line-clamp-2">Export or import your local configuration</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="text-slate-400 dark:text-white flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-[#1a212e] px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined">update</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal line-clamp-1">Check for Updates</p>
+<p class="text-slate-500 dark:text-[#9ca6ba] text-sm font-normal leading-normal line-clamp-2">Current version: v2.4.0</p>
+</div>
+</div>
+<div class="shrink-0">
+<span class="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-white">New</span>
+</div>
+</div>
+</div>
+<!-- Footer Info -->
+<div class="p-8 text-center">
+<p class="text-slate-400 dark:text-slate-500 text-xs font-normal">GitHub Blog Manager • Made with passion</p>
+<button class="mt-4 px-6 py-2 rounded-full border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-sm font-medium">
+                    Sign Out
+                </button>
+</div>
+</div>
+</div>
+</body></html>

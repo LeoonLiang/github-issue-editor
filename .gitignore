@@ -54,3 +54,6 @@ app.*.map.json
 **/secrets.dart
 secrets-replace.txt
 .env.*
+config.json
+config.local.json
+**/config.private.json

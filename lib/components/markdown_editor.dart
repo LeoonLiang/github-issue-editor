@@ -51,7 +51,7 @@ class _MarkdownEditorState extends ConsumerState<MarkdownEditor> {
   bool _isVideoLoading = false;
   bool _useGrid = true; // 是否使用九宫格
   List<String> _labels = [];
-  String _selectedLabel = 'note';
+  String _selectedLabel = '';
   List<String> _uploadedImages = []; // 存储上传的图片 URL
   List<_UploadResult> _uploadedImageResults = []; // 上传结果顺序列表
 

@@ -148,14 +148,3 @@ final issuesProvider = StateNotifierProvider.family<IssuesNotifier, IssuesState,
   final githubService = ref.watch(githubServiceProvider);
   return IssuesNotifier(githubService, params);
 });
-
-/// Labels Provider - 获取标签列表
-final labelsProvider = FutureProvider<List<String>>((ref) async {
-  final githubService = ref.watch(githubServiceProvider);
-
-  if (githubService == null) {
-    return [];
-  }
-
-  return await githubService.fetchGitHubLabels();
-});
