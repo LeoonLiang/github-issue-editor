@@ -88,7 +88,7 @@ class ImageGridWidget extends ConsumerWidget {
     final size = (MediaQuery.of(context).size.width - 32) / 3 - 8;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final config = ref.watch(configProvider);
-    final hasOSS = config.hasOSSConfigured;
+    final hasOSS = config.hasImageStorageConfigured;
 
     return GestureDetector(
       onTap: () => _pickImages(context, ref, currentCount),
@@ -135,13 +135,13 @@ class ImageGridWidget extends ConsumerWidget {
   Future<void> _pickImages(BuildContext context, WidgetRef ref, int currentCount) async {
     final config = ref.read(configProvider);
 
-    // 检查是否配置了 OSS
-    if (!config.hasOSSConfigured) {
+    // 检查是否配置了任何图床（OSS 或 GitHub）
+    if (!config.hasImageStorageConfigured) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('提示'),
-          content: const Text('图片上传功能需要配置对象存储（OSS），请先在设置中配置。'),
+          content: const Text('图片上传功能需要配置图床（对象存储或 GitHub 图床），请先在设置中配置。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

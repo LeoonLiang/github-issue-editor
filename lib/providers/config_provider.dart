@@ -56,6 +56,16 @@ class ConfigNotifier extends StateNotifier<AppConfig> {
     await saveConfig(newConfig);
   }
 
+  /// 更新存储路径前缀
+  Future<void> updateStoragePrefixes(String imagePrefix, String videoPrefix) async {
+    final newEditor = state.editor.copyWith(
+      imagePrefix: imagePrefix,
+      videoPrefix: videoPrefix,
+    );
+    final newConfig = state.copyWith(editor: newEditor);
+    await saveConfig(newConfig);
+  }
+
   /// 添加 OSS 配置
   Future<void> addOSSConfig(OSSConfig oss) async {
     final newList = [...state.ossList, oss];
@@ -86,6 +96,29 @@ class ConfigNotifier extends StateNotifier<AppConfig> {
     }).toList();
     final newConfig = state.copyWith(ossList: newList);
     await saveConfig(newConfig);
+  }
+
+  /// 更新 GitHub 图床配置
+  Future<void> updateGitHubImageConfig(GitHubImageConfig config) async {
+    final newConfig = state.copyWith(githubImage: config);
+    await saveConfig(newConfig);
+  }
+
+  /// 删除 GitHub 图床配置
+  Future<void> deleteGitHubImageConfig() async {
+    final newConfig = state.copyWith(githubImage: null);
+    await saveConfig(newConfig);
+  }
+
+  /// 切换 GitHub 图床启用状态
+  Future<void> toggleGitHubImageEnabled() async {
+    if (state.githubImage != null) {
+      final newGitHubImage = state.githubImage!.copyWith(
+        enabled: !state.githubImage!.enabled,
+      );
+      final newConfig = state.copyWith(githubImage: newGitHubImage);
+      await saveConfig(newConfig);
+    }
   }
 
   /// 清空配置

@@ -134,6 +134,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () => _showOSSConfigDialog(),
                 isDark: isDark,
               ),
+              _buildSettingItem(
+                icon: Icons.code,
+                iconColor: AppColors.primary,
+                title: 'GitHub 图床',
+                subtitle: () {
+                  final githubImage = ref.watch(configProvider).githubImage;
+                  if (githubImage == null || !githubImage.isValid) {
+                    return '未配置';
+                  }
+                  return githubImage.enabled
+                      ? '${githubImage.owner}/${githubImage.repo} (已启用)'
+                      : '${githubImage.owner}/${githubImage.repo} (已禁用)';
+                }(),
+                onTap: () => _showGitHubImageConfigDialog(),
+                isDark: isDark,
+              ),
+              _buildDivider(isDark),
+              _buildSettingItem(
+                icon: Icons.folder,
+                iconColor: AppColors.primary,
+                title: '默认存储路径',
+                subtitle: () {
+                  final config = ref.watch(configProvider);
+                  return '图片: ${config.editor.imagePrefix}/ • 视频: ${config.editor.videoPrefix}/';
+                }(),
+                onTap: () => _showStoragePrefixesDialog(),
+                isDark: isDark,
+              ),
             ],
           ),
 
@@ -420,6 +448,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               backgroundColor: AppColors.success,
             ),
           );
+        },
+      ),
+    );
+  }
+
+  /// 显示存储路径前缀配置对话框
+  void _showStoragePrefixesDialog() {
+    final config = ref.read(configProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _StoragePrefixesBottomSheet(
+        initialImagePrefix: config.editor.imagePrefix,
+        initialVideoPrefix: config.editor.videoPrefix,
+        isDark: isDark,
+        onSave: (imagePrefix, videoPrefix) async {
+          await ref.read(configProvider.notifier).updateStoragePrefixes(imagePrefix, videoPrefix);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('配置已保存'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
         },
       ),
     );
@@ -1598,6 +1654,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+
+  /// 显示 GitHub 图床配置对话框
+  void _showGitHubImageConfigDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentConfig = ref.read(configProvider).githubImage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _GitHubImageConfigBottomSheet(
+        initialConfig: currentConfig,
+        isDark: isDark,
+        onSave: (config) async {
+          await ref.read(configProvider.notifier).updateGitHubImageConfig(config);
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('GitHub 图床配置已保存'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        },
+        onDelete: () async {
+          await ref.read(configProvider.notifier).deleteGitHubImageConfig();
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('GitHub 图床配置已删除'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        },
+        onToggle: () async {
+          await ref.read(configProvider.notifier).toggleGitHubImageEnabled();
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
 }
 
 /// GitHub 配置底部抽屉
@@ -2504,6 +2600,564 @@ class _DefaultLabelBottomSheetState extends State<_DefaultLabelBottomSheet> {
                   child: ElevatedButton(
                     onPressed: () {
                       widget.onSave(_selectedLabel);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      '保存',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// GitHub 图床配置底部抽屉
+class _GitHubImageConfigBottomSheet extends StatefulWidget {
+  final GitHubImageConfig? initialConfig;
+  final bool isDark;
+  final Function(GitHubImageConfig) onSave;
+  final VoidCallback onDelete;
+  final VoidCallback onToggle;
+
+  const _GitHubImageConfigBottomSheet({
+    this.initialConfig,
+    required this.isDark,
+    required this.onSave,
+    required this.onDelete,
+    required this.onToggle,
+  });
+
+  @override
+  State<_GitHubImageConfigBottomSheet> createState() => _GitHubImageConfigBottomSheetState();
+}
+
+class _GitHubImageConfigBottomSheetState extends State<_GitHubImageConfigBottomSheet> {
+  late TextEditingController _ownerController;
+  late TextEditingController _repoController;
+  late TextEditingController _tokenController;
+  late TextEditingController _branchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerController = TextEditingController(text: widget.initialConfig?.owner ?? '');
+    _repoController = TextEditingController(text: widget.initialConfig?.repo ?? '');
+    _tokenController = TextEditingController(text: widget.initialConfig?.token ?? '');
+    _branchController = TextEditingController(text: widget.initialConfig?.branch ?? 'main');
+  }
+
+  @override
+  void dispose() {
+    _ownerController.dispose();
+    _repoController.dispose();
+    _tokenController.dispose();
+    _branchController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildInputField(
+    String label,
+    TextEditingController controller,
+    String hint, {
+    bool obscureText = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: widget.isDark ? Colors.white70 : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          style: TextStyle(
+            fontSize: 16,
+            color: widget.isDark ? Colors.white : Colors.black,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: widget.isDark ? Colors.white38 : Colors.black38,
+            ),
+            filled: true,
+            fillColor: widget.isDark
+                ? Colors.white.withOpacity(0.05)
+                : Colors.grey.withOpacity(0.1),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasConfig = widget.initialConfig != null && widget.initialConfig!.isValid;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: BoxDecoration(
+        color: widget.isDark
+            ? const Color(0xFF101622).withOpacity(0.95)
+            : Colors.white.withOpacity(0.95),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 25,
+            offset: const Offset(0, -10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // 拖动手柄
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+
+          // 标题
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 16, 16),
+            child: Row(
+              children: [
+                const Text(
+                  'GitHub 图床配置',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: widget.isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 18),
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInputField('仓库所有者', _ownerController, '例如: username'),
+                  const SizedBox(height: 16),
+                  _buildInputField('仓库名称', _repoController, '例如: images'),
+                  const SizedBox(height: 16),
+                  _buildInputField('Personal Access Token', _tokenController, '需要 repo 权限', obscureText: true),
+                  const SizedBox(height: 16),
+                  _buildInputField('分支名称', _branchController, '默认: main'),
+                  const SizedBox(height: 20),
+
+                  if (hasConfig) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: widget.isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            widget.initialConfig!.enabled ? Icons.check_circle : Icons.cancel,
+                            color: widget.initialConfig!.enabled ? AppColors.success : Colors.grey,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            widget.initialConfig!.enabled ? '已启用' : '已禁用',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          Switch(
+                            value: widget.initialConfig!.enabled,
+                            activeColor: AppColors.primary,
+                            onChanged: (value) {
+                              widget.onToggle();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                if (hasConfig) ...[
+                  Expanded(
+                    child: TextButton(
+                      onPressed: widget.onDelete,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.red.withOpacity(0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '删除',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final owner = _ownerController.text.trim();
+                      final repo = _repoController.text.trim();
+                      final token = _tokenController.text.trim();
+                      final branch = _branchController.text.trim();
+
+                      if (owner.isEmpty || repo.isEmpty || token.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('请填写完整信息'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final newConfig = GitHubImageConfig(
+                        owner: owner,
+                        repo: repo,
+                        token: token,
+                        branch: branch.isNotEmpty ? branch : 'main',
+                        enabled: widget.initialConfig?.enabled ?? true,
+                      );
+
+                      widget.onSave(newConfig);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '保存',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 存储路径前缀底部抽屉
+class _StoragePrefixesBottomSheet extends StatefulWidget {
+  final String initialImagePrefix;
+  final String initialVideoPrefix;
+  final bool isDark;
+  final Function(String, String) onSave;
+
+  const _StoragePrefixesBottomSheet({
+    required this.initialImagePrefix,
+    required this.initialVideoPrefix,
+    required this.isDark,
+    required this.onSave,
+  });
+
+  @override
+  State<_StoragePrefixesBottomSheet> createState() => _StoragePrefixesBottomSheetState();
+}
+
+class _StoragePrefixesBottomSheetState extends State<_StoragePrefixesBottomSheet> {
+  late TextEditingController _imagePrefixController;
+  late TextEditingController _videoPrefixController;
+
+  @override
+  void initState() {
+    super.initState();
+    _imagePrefixController = TextEditingController(text: widget.initialImagePrefix);
+    _videoPrefixController = TextEditingController(text: widget.initialVideoPrefix);
+  }
+
+  @override
+  void dispose() {
+    _imagePrefixController.dispose();
+    _videoPrefixController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: widget.isDark ? Color(0xFF101622).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 25,
+            offset: Offset(0, -10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 拖动手柄
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+
+          // 大标题 + 关闭按钮
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 16, 24),
+            child: Row(
+              children: [
+                Text(
+                  '默认存储路径',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                Spacer(),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: widget.isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, size: 18),
+                    padding: EdgeInsets.zero,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 图片路径前缀输入框
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              controller: _imagePrefixController,
+              style: TextStyle(
+                fontSize: 16,
+                color: widget.isDark ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
+                labelText: '图片路径前缀',
+                hintText: '例如: img',
+                hintStyle: TextStyle(
+                  color: widget.isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
+                ),
+                filled: true,
+                fillColor: widget.isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 16),
+
+          // 视频路径前缀输入框
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              controller: _videoPrefixController,
+              style: TextStyle(
+                fontSize: 16,
+                color: widget.isDark ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
+                labelText: '视频路径前缀',
+                hintText: '例如: video',
+                hintStyle: TextStyle(
+                  color: widget.isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
+                ),
+                filled: true,
+                fillColor: widget.isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 24),
+
+          // 底部按钮
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: widget.isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.black.withOpacity(0.05),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      '取消',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onSave(
+                        _imagePrefixController.text.trim(),
+                        _videoPrefixController.text.trim(),
+                      );
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(

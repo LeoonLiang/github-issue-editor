@@ -2,11 +2,13 @@
 class AppConfig {
   final GitHubConfig github;
   final List<OSSConfig> ossList; // 支持多个OSS配置
+  final GitHubImageConfig? githubImage; // GitHub 图床配置
   final EditorConfig editor; // 编辑器配置
 
   AppConfig({
     required this.github,
     required this.ossList,
+    this.githubImage,
     EditorConfig? editor,
   }) : editor = editor ?? EditorConfig.empty();
 
@@ -14,6 +16,7 @@ class AppConfig {
     return AppConfig(
       github: GitHubConfig.empty(),
       ossList: [],
+      githubImage: null,
       editor: EditorConfig.empty(),
     );
   }
@@ -37,6 +40,9 @@ class AppConfig {
               ?.map((e) => OSSConfig.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      githubImage: json['githubImage'] != null
+          ? GitHubImageConfig.fromJson(json['githubImage'])
+          : null,
       editor: editor,
     );
   }
@@ -45,6 +51,7 @@ class AppConfig {
     return {
       'github': github.toJson(),
       'ossList': ossList.map((e) => e.toJson()).toList(),
+      'githubImage': githubImage?.toJson(),
       'editor': editor.toJson(),
     };
   }
@@ -52,11 +59,13 @@ class AppConfig {
   AppConfig copyWith({
     GitHubConfig? github,
     List<OSSConfig>? ossList,
+    GitHubImageConfig? githubImage,
     EditorConfig? editor,
   }) {
     return AppConfig(
       github: github ?? this.github,
       ossList: ossList ?? this.ossList,
+      githubImage: githubImage ?? this.githubImage,
       editor: editor ?? this.editor,
     );
   }
@@ -66,6 +75,10 @@ class AppConfig {
 
   /// 是否配置了对象存储
   bool get hasOSSConfigured => ossList.any((oss) => oss.enabled);
+
+  /// 是否配置了任何图床（OSS 或 GitHub 图床）
+  bool get hasImageStorageConfigured =>
+      hasOSSConfigured || (githubImage != null && githubImage!.enabled && githubImage!.isValid);
 
   /// 获取所有启用的OSS配置
   List<OSSConfig> get enabledOSSList => ossList.where((oss) => oss.enabled).toList();
@@ -226,16 +239,22 @@ class OSSConfig {
 class EditorConfig {
   final String displayDomain; // 图片回显域名
   final String defaultLabel; // 默认标签
+  final String imagePrefix; // 图片存储路径前缀
+  final String videoPrefix; // 视频存储路径前缀
 
   EditorConfig({
     this.displayDomain = '',
     this.defaultLabel = '',
+    this.imagePrefix = 'img',
+    this.videoPrefix = 'video',
   });
 
   factory EditorConfig.empty() {
     return EditorConfig(
       displayDomain: '',
       defaultLabel: '',
+      imagePrefix: 'img',
+      videoPrefix: 'video',
     );
   }
 
@@ -243,6 +262,8 @@ class EditorConfig {
     return EditorConfig(
       displayDomain: json['displayDomain'] ?? '',
       defaultLabel: json['defaultLabel'] ?? '',
+      imagePrefix: json['imagePrefix'] ?? 'img',
+      videoPrefix: json['videoPrefix'] ?? 'video',
     );
   }
 
@@ -250,16 +271,90 @@ class EditorConfig {
     return {
       'displayDomain': displayDomain,
       'defaultLabel': defaultLabel,
+      'imagePrefix': imagePrefix,
+      'videoPrefix': videoPrefix,
     };
   }
 
   EditorConfig copyWith({
     String? displayDomain,
     String? defaultLabel,
+    String? imagePrefix,
+    String? videoPrefix,
   }) {
     return EditorConfig(
       displayDomain: displayDomain ?? this.displayDomain,
       defaultLabel: defaultLabel ?? this.defaultLabel,
+      imagePrefix: imagePrefix ?? this.imagePrefix,
+      videoPrefix: videoPrefix ?? this.videoPrefix,
     );
   }
 }
+
+/// GitHub 图床配置
+class GitHubImageConfig {
+  final String owner; // 仓库所有者
+  final String repo; // 仓库名称
+  final String token; // Personal Access Token
+  final String branch; // 分支名称，默认 main
+  final bool enabled; // 是否启用
+
+  GitHubImageConfig({
+    required this.owner,
+    required this.repo,
+    required this.token,
+    this.branch = 'main',
+    this.enabled = true,
+  });
+
+  factory GitHubImageConfig.empty() {
+    return GitHubImageConfig(
+      owner: '',
+      repo: '',
+      token: '',
+      branch: 'main',
+      enabled: true,
+    );
+  }
+
+  factory GitHubImageConfig.fromJson(Map<String, dynamic> json) {
+    return GitHubImageConfig(
+      owner: json['owner'] ?? '',
+      repo: json['repo'] ?? '',
+      token: json['token'] ?? '',
+      branch: json['branch'] ?? 'main',
+      enabled: json['enabled'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'owner': owner,
+      'repo': repo,
+      'token': token,
+      'branch': branch,
+      'enabled': enabled,
+    };
+  }
+
+  GitHubImageConfig copyWith({
+    String? owner,
+    String? repo,
+    String? token,
+    String? branch,
+    bool? enabled,
+  }) {
+    return GitHubImageConfig(
+      owner: owner ?? this.owner,
+      repo: repo ?? this.repo,
+      token: token ?? this.token,
+      branch: branch ?? this.branch,
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  bool get isValid {
+    return owner.isNotEmpty && repo.isNotEmpty && token.isNotEmpty;
+  }
+}
+

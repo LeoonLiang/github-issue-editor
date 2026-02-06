@@ -11,7 +11,16 @@ final imageProcessServiceProvider = Provider<ImageProcessService>((ref) {
   final config = ref.watch(configProvider);
   final enabledOssList = config.enabledOSSList;
   final displayDomain = config.editor.displayDomain;
-  return ImageProcessService(enabledOssList, displayDomain);
+  final imagePrefix = config.editor.imagePrefix;
+  final videoPrefix = config.editor.videoPrefix;
+  final githubImage = config.githubImage;
+  return ImageProcessService(
+    enabledOssList,
+    displayDomain,
+    imagePrefix,
+    videoPrefix,
+    githubImageConfig: githubImage,
+  );
 });
 
 /// 上传队列状态管理
