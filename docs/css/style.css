@@ -119,56 +119,22 @@ body {
     background: var(--bg-white);
 }
 
+.demo-hint {
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 48px;
+}
+
 .demo-content {
     display: flex;
-    gap: 48px;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
 .phone-mock-wrapper {
-    flex: 1;
     display: flex;
     justify-content: center;
-}
-
-.feature-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.feature-btn {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 24px;
-    background: var(--bg-light);
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 200px;
-}
-
-.feature-btn:hover {
-    border-color: var(--primary);
-    background: var(--primary-light);
-}
-
-.feature-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.feature-icon {
-    font-size: 24px;
-}
-
-.feature-label {
-    font-size: 16px;
-    font-weight: 600;
 }
 
 /* 功能特性区域 */

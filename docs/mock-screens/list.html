@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文章列表</title>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -18,25 +19,35 @@
             overflow-x: hidden;
         }
 
-        /* 顶部栏 */
+        /* 顶部栏 - 毛玻璃效果 */
         .top-bar {
-            background: #fff;
-            padding: 12px 16px;
-            border-bottom: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
         }
 
+        .top-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        /* 搜索栏 */
         .search-box {
             display: flex;
             align-items: center;
             gap: 8px;
-            background: #f5f6f8;
-            padding: 10px 12px;
+            background: #f1f5f9;
+            padding: 8px 12px;
             border-radius: 10px;
         }
 
         .search-icon {
             color: #64748b;
-            font-size: 18px;
+            font-size: 20px;
         }
 
         .search-input {
@@ -55,10 +66,13 @@
         .filter-btn {
             background: #0d59f2;
             color: white;
-            padding: 8px 12px;
+            padding: 6px 12px;
             border-radius: 8px;
             font-size: 14px;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         /* 标签栏 */
@@ -122,6 +136,7 @@
             font-size: 12px;
             color: #94a3b8;
             margin-left: 12px;
+            white-space: nowrap;
         }
 
         .article-excerpt {
@@ -151,7 +166,7 @@
             font-weight: 500;
         }
 
-        /* 底部导航 */
+        /* 底部导航 - 只有2个选项 */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -181,31 +196,39 @@
             font-size: 24px;
         }
 
-        /* 浮动按钮 */
+        /* 浮动按钮 - Extended FAB */
         .fab {
             position: fixed;
             bottom: 80px;
             right: 20px;
-            width: 56px;
-            height: 56px;
             background: #0d59f2;
-            border-radius: 50%;
+            padding: 12px 20px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
             color: white;
-            font-size: 28px;
+            font-size: 15px;
+            font-weight: 600;
             box-shadow: 0 4px 12px rgba(13, 89, 242, 0.3);
+        }
+
+        .fab-icon {
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
     <!-- 顶部搜索栏 -->
     <div class="top-bar">
+        <div class="top-title">动态</div>
         <div class="search-box">
-            <span class="search-icon">🔍</span>
+            <span class="iconify search-icon" data-icon="mdi:magnify"></span>
             <input type="text" class="search-input" placeholder="搜索文章..." readonly>
-            <span class="filter-btn">筛选</span>
+            <span class="filter-btn">
+                <span class="iconify" data-icon="mdi:filter-variant"></span>
+                筛选
+            </span>
         </div>
     </div>
 
@@ -263,23 +286,37 @@
         <div style="height: 80px;"></div>
     </div>
 
-    <!-- 底部导航 -->
+    <!-- 底部导航 - 只有2个选项 -->
     <div class="bottom-nav">
         <div class="nav-item active">
-            <div class="nav-icon">📄</div>
-            <div>文章</div>
+            <span class="iconify nav-icon" data-icon="mdi:feed"></span>
+            <div>动态</div>
         </div>
         <div class="nav-item">
-            <div class="nav-icon">⚙️</div>
+            <span class="iconify nav-icon" data-icon="mdi:cog-outline"></span>
             <div>设置</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">ℹ️</div>
-            <div>关于</div>
         </div>
     </div>
 
-    <!-- 浮动按钮 -->
-    <div class="fab">✏️</div>
+    <!-- 浮动按钮 - Extended FAB -->
+    <div class="fab" id="fabBtn">
+        <span class="iconify fab-icon" data-icon="mdi:plus"></span>
+        <span>发布</span>
+    </div>
+
+    <script>
+        // 导航交互
+        document.addEventListener('DOMContentLoaded', () => {
+            // FAB 按钮 - 导航到发布页
+            document.getElementById('fabBtn').addEventListener('click', () => {
+                window.parent.postMessage({ type: 'navigate', screen: 'publish' }, '*');
+            });
+
+            // 底部导航 - 设置
+            document.querySelectorAll('.nav-item')[1].addEventListener('click', () => {
+                window.parent.postMessage({ type: 'navigate', screen: 'settings' }, '*');
+            });
+        });
+    </script>
 </body>
 </html>

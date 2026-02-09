@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>设置</title>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -57,6 +58,11 @@
             align-items: center;
             padding: 14px 16px;
             border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+
+        .setting-item:hover {
+            background: #f9fafb;
         }
 
         .setting-item:last-child {
@@ -113,6 +119,37 @@
             font-weight: 600;
             margin-left: 6px;
         }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            padding: 8px 0 12px;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #94a3b8;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #0d59f2;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
@@ -128,13 +165,15 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>🐙</span>
+                    <span class="iconify" data-icon="mdi:github" style="color: #1e293b; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">GitHub 仓库</div>
                     <div class="setting-subtitle">leoonliang/blog</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
         </div>
 
@@ -143,17 +182,19 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>☁️</span>
+                    <span class="iconify" data-icon="mdi:cloud" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">对象存储配置</div>
                     <div class="setting-subtitle">2个配置, 2个已启用</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>🐙</span>
+                    <span class="iconify" data-icon="mdi:github" style="color: #1e293b; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">
@@ -162,11 +203,13 @@
                     </div>
                     <div class="setting-subtitle highlight">leoonliang/images (已启用)</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>📁</span>
+                    <span class="iconify" data-icon="mdi:folder" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">
@@ -175,7 +218,9 @@
                     </div>
                     <div class="setting-subtitle">图片: img/ • 视频: video/</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
         </div>
 
@@ -184,38 +229,44 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>🖼️</span>
+                    <span class="iconify" data-icon="mdi:image" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">图片回显域名</div>
                     <div class="setting-subtitle">cdn.example.com</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>🏷️</span>
+                    <span class="iconify" data-icon="mdi:tag" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">默认标签</div>
                     <div class="setting-subtitle">article</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
         </div>
 
         <!-- 外观 -->
         <div class="section-title">外观</div>
         <div class="settings-card">
-            <div class="setting-item">
+            <div class="setting-item" id="themeBtn">
                 <div class="setting-icon blue">
-                    <span>🎨</span>
+                    <span class="iconify" data-icon="mdi:palette" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">主题</div>
                     <div class="setting-subtitle">跟随系统</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
         </div>
 
@@ -224,25 +275,58 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>💾</span>
+                    <span class="iconify" data-icon="mdi:database" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">备份与恢复</div>
                     <div class="setting-subtitle">导出或导入本地配置</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span>🔄</span>
+                    <span class="iconify" data-icon="mdi:update" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">检查更新</div>
                     <div class="setting-subtitle">当前版本: v2.1.0</div>
                 </div>
-                <div class="setting-arrow">›</div>
+                <div class="setting-arrow">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </div>
             </div>
         </div>
+
+        <div style="height: 80px;"></div>
     </div>
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <div class="nav-item" id="listNavBtn">
+            <span class="iconify nav-icon" data-icon="mdi:feed"></span>
+            <div>动态</div>
+        </div>
+        <div class="nav-item active">
+            <span class="iconify nav-icon" data-icon="mdi:cog-outline"></span>
+            <div>设置</div>
+        </div>
+    </div>
+
+    <script>
+        // 导航交互
+        document.addEventListener('DOMContentLoaded', () => {
+            // 主题按钮 - 导航到主题对比页
+            document.getElementById('themeBtn').addEventListener('click', () => {
+                window.parent.postMessage({ type: 'navigate', screen: 'theme' }, '*');
+            });
+
+            // 底部导航 - 动态
+            document.getElementById('listNavBtn').addEventListener('click', () => {
+                window.parent.postMessage({ type: 'navigate', screen: 'list' }, '*');
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,19 +1,11 @@
 // 手机演示交互
 document.addEventListener('DOMContentLoaded', () => {
     const phoneScreen = document.getElementById('phoneScreen');
-    const featureBtns = document.querySelectorAll('.feature-btn');
 
-    // 功能按钮点击事件
-    featureBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // 移除所有活动状态
-            featureBtns.forEach(b => b.classList.remove('active'));
-
-            // 添加当前活动状态
-            btn.classList.add('active');
-
-            // 获取要显示的屏幕
-            const screen = btn.dataset.screen;
+    // 监听来自 iframe 的导航消息
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'navigate') {
+            const screen = event.data.screen;
 
             // 添加淡出效果
             phoneScreen.style.opacity = '0';
@@ -29,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     phoneScreen.style.transform = 'scale(1)';
                 }, 50);
             }, 200);
-        });
+        }
     });
 
     // 添加过渡效果

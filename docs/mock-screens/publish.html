@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>发布文章</title>
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -31,6 +32,10 @@
             color: #0d59f2;
             font-size: 16px;
             font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .top-title {
@@ -46,6 +51,7 @@
             border-radius: 8px;
             font-size: 15px;
             font-weight: 500;
+            cursor: pointer;
         }
 
         /* 内容区域 */
@@ -153,27 +159,27 @@
         }
 
         .image-item.photo {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
         }
 
         .image-item.photo:nth-child(2) {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: #f093fb;
         }
 
         .image-item.photo:nth-child(3) {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: #4facfe;
         }
 
         .image-item.photo:nth-child(4) {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            background: #43e97b;
         }
 
         .image-item.photo:nth-child(5) {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            background: #fa709a;
         }
 
         .image-item.photo:nth-child(6) {
-            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+            background: #30cfd0;
         }
 
         .delete-btn {
@@ -207,9 +213,12 @@
 <body>
     <!-- 顶部栏 -->
     <div class="top-bar">
-        <div class="back-btn">← 返回</div>
+        <div class="back-btn" id="backBtn">
+            <span class="iconify" data-icon="mdi:chevron-left"></span>
+            返回
+        </div>
         <div class="top-title">新建文章</div>
-        <div class="publish-btn">发布</div>
+        <div class="publish-btn" id="publishBtn">发布</div>
     </div>
 
     <!-- 内容区域 -->
@@ -270,5 +279,20 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // 导航交互
+        document.addEventListener('DOMContentLoaded', () => {
+            // 返回按钮
+            document.getElementById('backBtn').addEventListener('click', () => {
+                window.parent.postMessage({ type: 'navigate', screen: 'list' }, '*');
+            });
+
+            // 发布按钮
+            document.getElementById('publishBtn').addEventListener('click', () => {
+                window.parent.postMessage({ type: 'navigate', screen: 'list' }, '*');
+            });
+        });
+    </script>
 </body>
 </html>
