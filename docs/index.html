@@ -173,15 +173,61 @@
                         <p>支持小米实况照片，编辑时自动保留原视频，发布后保留完整元数据</p>
                     </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon-large">
-                        <span class="iconify" data-icon="mdi:tag-multiple" style="color: #0d59f2;"></span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 输出格式展示 -->
+    <section class="output-format-section">
+        <div class="container">
+            <h2 class="section-title">📝 输出格式</h2>
+            <p class="section-subtitle">发布的 GitHub Issue 采用增强的 Markdown 格式，包含丰富的图片元数据</p>
+
+            <div class="format-cards">
+                <div class="format-card">
+                    <div class="format-header">
+                        <span class="iconify" data-icon="mdi:image" style="color: #0d59f2; font-size: 24px;"></span>
+                        <h3>普通图片</h3>
                     </div>
-                    <div class="feature-info">
-                        <h3>标签筛选</h3>
-                        <p>按标签筛选文章，支持默认标签自动选择</p>
+                    <div class="format-code">
+                        <code>![image](https://cdn.example.com/img/photo.jpg)<br>{width=4096 height=3072 thumbhash="5xgOFYLHqZeKiHePdYZ4dhWCkDAG"}</code>
+                    </div>
+                    <div class="format-features">
+                        <div class="format-feature">
+                            <span class="iconify" data-icon="mdi:check-circle" style="color: #10b981;"></span>
+                            <span>图片原始尺寸</span>
+                        </div>
+                        <div class="format-feature">
+                            <span class="iconify" data-icon="mdi:check-circle" style="color: #10b981;"></span>
+                            <span>ThumbHash 模糊预览</span>
+                        </div>
                     </div>
                 </div>
+
+                <div class="format-card highlight">
+                    <div class="format-header">
+                        <span class="iconify" data-icon="mdi:motion-play" style="color: #0d59f2; font-size: 24px;"></span>
+                        <h3>实况照片 Live Photo</h3>
+                    </div>
+                    <div class="format-code">
+                        <code>![image](https://cdn.example.com/img/live.jpg)<br>{liveVideo="https://cdn.example.com/video/live.mp4" width=4096 height=3072 thumbhash="XQgKDYL6mFiTybdFZnipeZPgIAgP"}</code>
+                    </div>
+                    <div class="format-features">
+                        <div class="format-feature">
+                            <span class="iconify" data-icon="mdi:check-circle" style="color: #10b981;"></span>
+                            <span>自动保留实况视频</span>
+                        </div>
+                        <div class="format-feature">
+                            <span class="iconify" data-icon="mdi:check-circle" style="color: #10b981;"></span>
+                            <span>完整元数据支持</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="format-note">
+                <span class="iconify" data-icon="mdi:information" style="color: #0d59f2; font-size: 20px;"></span>
+                <p>这些元数据可被支持的博客系统解析，用于优化图片加载体验和实现实况照片播放功能</p>
             </div>
         </div>
     </section>
