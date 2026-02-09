@@ -34,9 +34,9 @@ GitHub Issue Editor 是一款专为移动端优化的 GitHub Issues 管理工具
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/list.jpg" width="250" alt="文章列表"/><br/><sub><b>文章列表</b></sub></td>
-    <td align="center"><img src="docs/images/publish.jpg" width="250" alt="发布文章"/><br/><sub><b>发布文章</b></sub></td>
-    <td align="center"><img src="docs/images/setting.jpg" width="250" alt="设置页面"/><br/><sub><b>设置页面</b></sub></td>
+    <td align="center"><img src="https://leoonliang.github.io/github-issue-editor/images/list.jpg" width="250" alt="文章列表"/><br/><sub><b>文章列表</b></sub></td>
+    <td align="center"><img src="https://leoonliang.github.io/github-issue-editor/images/publish.jpg" width="250" alt="发布文章"/><br/><sub><b>发布文章</b></sub></td>
+    <td align="center"><img src="https://leoonliang.github.io/github-issue-editor/images/setting.jpg" width="250" alt="设置页面"/><br/><sub><b>设置页面</b></sub></td>
   </tr>
 </table>
 
