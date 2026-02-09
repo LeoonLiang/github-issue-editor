@@ -18,12 +18,24 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
+/* 暗色主题 */
+[data-theme="dark"] {
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --bg-light: #0f172a;
+    --bg-white: #1e293b;
+    --border-color: #334155;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
         'Microsoft YaHei', sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     background: var(--bg-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -36,8 +48,34 @@ body {
 .hero {
     background: var(--primary);
     color: white;
-    padding: 80px 0;
+    padding: 60px 0 40px;
     text-align: center;
+    position: relative;
+}
+
+/* 主题切换按钮 */
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(180deg);
 }
 
 .hero-content {
@@ -46,29 +84,30 @@ body {
 }
 
 .hero-title {
-    font-size: 56px;
+    font-size: 48px;
     font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     letter-spacing: -0.5px;
+    color: white;
 }
 
 .hero-subtitle {
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 500;
-    margin-bottom: 16px;
-    opacity: 0.95;
+    margin-bottom: 12px;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .hero-description {
-    font-size: 18px;
-    line-height: 1.8;
-    opacity: 0.9;
-    margin-bottom: 40px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 32px;
 }
 
 .hero-buttons {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     justify-content: center;
     flex-wrap: wrap;
 }
@@ -77,8 +116,8 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 14px 32px;
-    font-size: 16px;
+    padding: 12px 24px;
+    font-size: 15px;
     font-weight: 600;
     border-radius: 12px;
     text-decoration: none;
@@ -90,22 +129,22 @@ body {
 .btn-primary {
     background: white;
     color: var(--primary);
-    box-shadow: var(--shadow);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
     color: white;
-    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .btn-large {
@@ -115,103 +154,243 @@ body {
 
 /* 演示区域 */
 .demo-section {
-    padding: 80px 0;
-    background: var(--bg-white);
+    padding: 60px 0 80px;
+    background: var(--bg-light);
 }
 
 .demo-hint {
     text-align: center;
-    font-size: 16px;
+    font-size: 14px;
     color: var(--text-secondary);
-    margin-bottom: 48px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.demo-hint::before {
+    content: '👆';
+    font-size: 18px;
 }
 
 .demo-content {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
 }
 
 .phone-mock-wrapper {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    gap: 24px;
+}
+
+/* 移动端图片轮播 */
+.mobile-screenshots {
+    display: none;
+    max-width: 100%;
+    position: relative;
+}
+
+.screenshot-carousel {
+    position: relative;
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    cursor: grab;
+    user-select: none;
+}
+
+.screenshot-carousel:active {
+    cursor: grabbing;
+}
+
+.screenshot-image {
+    width: 100%;
+    display: block;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.carousel-dots {
+    display: flex;
     justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dot.active {
+    background: var(--primary);
+    width: 24px;
+    border-radius: 4px;
+}
+
+/* 屏幕指示器 */
+.screen-indicators {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.screen-indicator {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--bg-white);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.screen-indicator:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.screen-indicator.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* 功能提示 */
+.feature-hints {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 600px;
+}
+
+.hint-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-white);
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.hint-icon {
+    font-size: 16px;
 }
 
 /* 功能特性区域 */
 .features-section {
-    padding: 80px 0;
-    background: var(--bg-light);
+    padding: 60px 0;
+    background: var(--bg-white);
 }
 
 .section-title {
     text-align: center;
-    font-size: 40px;
+    font-size: 32px;
     font-weight: 700;
-    margin-bottom: 48px;
+    margin-bottom: 40px;
     color: var(--text-primary);
 }
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
 }
 
 .feature-card {
     background: var(--bg-white);
-    padding: 32px;
+    padding: 24px;
     border-radius: 16px;
-    box-shadow: var(--shadow);
-    text-align: center;
-    transition: transform 0.2s ease;
+    border: 1px solid var(--border-color);
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    gap: 16px;
 }
 
 .feature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary);
 }
 
 .feature-icon-large {
-    font-size: 48px;
-    margin-bottom: 16px;
+    font-size: 36px;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-light);
+    border-radius: 12px;
 }
 
 .feature-card h3 {
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     color: var(--text-primary);
 }
 
 .feature-card p {
     color: var(--text-secondary);
-    line-height: 1.6;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.feature-info {
+    flex: 1;
 }
 
 /* CTA 区域 */
 .cta-section {
-    padding: 80px 0;
-    background: var(--bg-white);
+    padding: 60px 0;
+    background: var(--bg-light);
     text-align: center;
 }
 
 .cta-section h2 {
-    font-size: 40px;
+    font-size: 32px;
     font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
 }
 
 .cta-section p {
-    font-size: 18px;
+    font-size: 16px;
     color: var(--text-secondary);
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 /* Footer */
 .footer {
-    background: var(--text-primary);
+    background: #1e293b;
     color: white;
     padding: 48px 0 24px;
+}
+
+[data-theme="dark"] .footer {
+    background: #0f172a;
 }
 
 .footer-content {
@@ -225,6 +404,7 @@ body {
 .footer-left h3 {
     font-size: 24px;
     margin-bottom: 8px;
+    color: white;
 }
 
 .footer-left p {
@@ -272,36 +452,79 @@ body {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    .hero {
+        padding: 40px 0 30px;
+    }
+
+    .theme-toggle {
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
     .hero-title {
-        font-size: 36px;
+        font-size: 32px;
     }
 
     .hero-subtitle {
-        font-size: 20px;
+        font-size: 16px;
     }
 
     .hero-description {
-        font-size: 16px;
+        font-size: 14px;
+    }
+
+    .section-title {
+        font-size: 24px;
+        margin-bottom: 24px;
+    }
+
+    .demo-section {
+        padding: 40px 0;
+    }
+
+    .features-section {
+        padding: 40px 0;
+    }
+
+    .cta-section {
+        padding: 40px 0;
+    }
+
+    .cta-section h2 {
+        font-size: 24px;
     }
 
     .demo-content {
         flex-direction: column;
     }
 
-    .feature-nav {
-        flex-direction: row;
-        overflow-x: auto;
-        width: 100%;
+    /* 移动端隐藏手机模拟器，显示截图轮播 */
+    .phone-mock-wrapper .phone-mock {
+        display: none;
     }
 
-    .feature-btn {
-        min-width: 140px;
-        flex-direction: column;
-        text-align: center;
+    .phone-mock-wrapper .screen-indicators {
+        display: none;
+    }
+
+    .phone-mock-wrapper .feature-hints {
+        display: none;
+    }
+
+    .mobile-screenshots {
+        display: block;
     }
 
     .features-grid {
         grid-template-columns: 1fr;
+    }
+
+    .feature-card {
+        flex-direction: column;
+        text-align: left;
     }
 
     .footer-content {
@@ -311,5 +534,37 @@ body {
     .footer-links {
         flex-direction: column;
         gap: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 16px;
+    }
+
+    .hero-title {
+        font-size: 28px;
+    }
+
+    .hero-subtitle {
+        font-size: 14px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .screen-indicators {
+        gap: 6px;
+    }
+
+    .screen-indicator {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .screen-indicator .iconify {
+        display: none;
     }
 }

@@ -16,6 +16,59 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: #f5f6f8;
             color: #1e293b;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* 暗黑主题 */
+        [data-theme="dark"] body {
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .top-bar {
+            background: #1e293b;
+            border-bottom-color: #334155;
+        }
+
+        [data-theme="dark"] .top-title {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .section-title {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .settings-card {
+            background: #1e293b;
+        }
+
+        [data-theme="dark"] .setting-item:hover {
+            background: #334155;
+        }
+
+        [data-theme="dark"] .setting-item {
+            border-bottom-color: #334155;
+        }
+
+        [data-theme="dark"] .setting-title {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .setting-subtitle {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .setting-subtitle.highlight {
+            color: #10b981;
+        }
+
+        [data-theme="dark"] .setting-icon.blue {
+            background: rgba(13, 89, 242, 0.3);
+        }
+
+        [data-theme="dark"] .bottom-nav {
+            background: #1e293b;
+            border-top-color: #334155;
         }
 
         /* 顶部栏 */
@@ -165,14 +218,14 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:github" style="color: #1e293b; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:storage" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">GitHub 仓库</div>
                     <div class="setting-subtitle">leoonliang/blog</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
         </div>
@@ -182,19 +235,19 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:cloud" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:cloud-upload" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">对象存储配置</div>
                     <div class="setting-subtitle">2个配置, 2个已启用</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:github" style="color: #1e293b; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:code" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">
@@ -204,12 +257,12 @@
                     <div class="setting-subtitle highlight">leoonliang/images (已启用)</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:folder" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:folder" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">
@@ -219,7 +272,7 @@
                     <div class="setting-subtitle">图片: img/ • 视频: video/</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
         </div>
@@ -229,26 +282,26 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:image" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:image-search" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">图片回显域名</div>
                     <div class="setting-subtitle">cdn.example.com</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:tag" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:label" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">默认标签</div>
                     <div class="setting-subtitle">article</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
         </div>
@@ -258,14 +311,14 @@
         <div class="settings-card">
             <div class="setting-item" id="themeBtn">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:palette" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:palette" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">主题</div>
                     <div class="setting-subtitle">跟随系统</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
         </div>
@@ -275,26 +328,26 @@
         <div class="settings-card">
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:database" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:database" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">备份与恢复</div>
                     <div class="setting-subtitle">导出或导入本地配置</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
             <div class="setting-item">
                 <div class="setting-icon blue">
-                    <span class="iconify" data-icon="mdi:update" style="color: #0d59f2; font-size: 20px;"></span>
+                    <span class="iconify" data-icon="material-symbols:update" style="color: #0d59f2; font-size: 20px;"></span>
                 </div>
                 <div class="setting-info">
                     <div class="setting-title">检查更新</div>
                     <div class="setting-subtitle">当前版本: v2.1.0</div>
                 </div>
                 <div class="setting-arrow">
-                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                    <span class="iconify" data-icon="material-symbols:chevron-right"></span>
                 </div>
             </div>
         </div>
@@ -305,11 +358,11 @@
     <!-- 底部导航 -->
     <div class="bottom-nav">
         <div class="nav-item" id="listNavBtn">
-            <span class="iconify nav-icon" data-icon="mdi:feed"></span>
+            <span class="iconify nav-icon" data-icon="material-symbols:feed-outline"></span>
             <div>动态</div>
         </div>
         <div class="nav-item active">
-            <span class="iconify nav-icon" data-icon="mdi:cog-outline"></span>
+            <span class="iconify nav-icon" data-icon="material-symbols:settings"></span>
             <div>设置</div>
         </div>
     </div>
@@ -326,6 +379,17 @@
             document.getElementById('listNavBtn').addEventListener('click', () => {
                 window.parent.postMessage({ type: 'navigate', screen: 'list' }, '*');
             });
+
+            // 监听主题切换消息
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'theme-change') {
+                    document.documentElement.setAttribute('data-theme', event.data.theme);
+                }
+            });
+
+            // 初始加载时从localStorage读取主题
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
         });
     </script>
 </body>

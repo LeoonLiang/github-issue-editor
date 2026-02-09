@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Issue Editor - GitHub Issues 管理神器</title>
     <meta name="description" content="一款优雅的 GitHub Issues 管理应用，支持 Markdown 编辑、多种图床、九宫格图片上传">
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/phone-mock.css">
 </head>
 <body>
     <!-- Hero 区域 -->
     <header class="hero">
+        <!-- 主题切换按钮 -->
+        <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+            <span class="iconify" data-icon="mdi:weather-sunny" id="themeIcon"></span>
+        </button>
+
         <div class="container">
             <div class="hero-content">
                 <h1 class="hero-title">GitHub Issue Editor</h1>
@@ -41,8 +47,8 @@
     <!-- 演示区域 -->
     <section class="demo-section">
         <div class="container">
-            <h2 class="section-title">交互式演示</h2>
-            <p class="demo-hint">点击手机屏幕内的按钮和导航栏进行互动体验</p>
+            <h2 class="section-title">在线体验</h2>
+            <p class="demo-hint">点击屏幕内的按钮和导航栏体验应用功能</p>
             <div class="demo-content">
                 <!-- 手机模拟器 -->
                 <div class="phone-mock-wrapper">
@@ -52,6 +58,51 @@
                             <div class="phone-screen">
                                 <iframe id="phoneScreen" src="mock-screens/list.html" frameborder="0"></iframe>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 屏幕切换指示 -->
+                    <div class="screen-indicators">
+                        <div class="screen-indicator active" data-screen="list">
+                            <span class="iconify" data-icon="mdi:view-list"></span> 文章列表
+                        </div>
+                        <div class="screen-indicator" data-screen="publish">
+                            <span class="iconify" data-icon="mdi:pencil"></span> 发布
+                        </div>
+                        <div class="screen-indicator" data-screen="settings">
+                            <span class="iconify" data-icon="mdi:cog-outline"></span> 设置
+                        </div>
+                    </div>
+
+                    <!-- 功能提示 -->
+                    <div class="feature-hints">
+                        <div class="hint-item">
+                            <span class="hint-icon">📝</span>
+                            Markdown 编辑
+                        </div>
+                        <div class="hint-item">
+                            <span class="hint-icon">🖼️</span>
+                            九宫格布局
+                        </div>
+                        <div class="hint-item">
+                            <span class="hint-icon">🌓</span>
+                            主题切换
+                        </div>
+                        <div class="hint-item">
+                            <span class="hint-icon">☁️</span>
+                            多图床上传
+                        </div>
+                    </div>
+
+                    <!-- 移动端截图轮播 -->
+                    <div class="mobile-screenshots">
+                        <div class="screenshot-carousel">
+                            <img src="images/list.jpg" alt="文章列表" class="screenshot-image" id="screenshotImage">
+                        </div>
+                        <div class="carousel-dots">
+                            <div class="dot active" data-index="0"></div>
+                            <div class="dot" data-index="1"></div>
+                            <div class="dot" data-index="2"></div>
                         </div>
                     </div>
                 </div>
@@ -65,34 +116,58 @@
             <h2 class="section-title">核心特性</h2>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon-large">🌐</div>
-                    <h3>多种图床支持</h3>
-                    <p>支持 S3 兼容存储和 GitHub 图床，可同时启用多个图床并行上传</p>
+                    <div class="feature-icon-large">
+                        <span class="iconify" data-icon="mdi:cloud-upload" style="color: #0d59f2;"></span>
+                    </div>
+                    <div class="feature-info">
+                        <h3>多种图床支持</h3>
+                        <p>支持 S3 兼容存储和 GitHub 图床，可同时启用多个图床并行上传</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon-large">🎨</div>
-                    <h3>iOS 风格设计</h3>
-                    <p>全新的 iOS 风格 UI，支持浅色/深色/跟随系统三种主题模式</p>
+                    <div class="feature-icon-large">
+                        <span class="iconify" data-icon="mdi:palette" style="color: #0d59f2;"></span>
+                    </div>
+                    <div class="feature-info">
+                        <h3>iOS 风格设计</h3>
+                        <p>全新的 iOS 风格 UI，支持浅色/深色/跟随系统三种主题模式</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon-large">📸</div>
-                    <h3>相机拍照</h3>
-                    <p>支持相机拍照，拍照后可选择直接上传或使用编辑器编辑</p>
+                    <div class="feature-icon-large">
+                        <span class="iconify" data-icon="mdi:camera" style="color: #0d59f2;"></span>
+                    </div>
+                    <div class="feature-info">
+                        <h3>相机拍照</h3>
+                        <p>支持相机拍照，拍照后可选择直接上传或使用编辑器编辑</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon-large">📝</div>
-                    <h3>Markdown 编辑</h3>
-                    <p>完整的 Markdown 编辑支持，实时预览，自动保存草稿</p>
+                    <div class="feature-icon-large">
+                        <span class="iconify" data-icon="mdi:markdown" style="color: #0d59f2;"></span>
+                    </div>
+                    <div class="feature-info">
+                        <h3>Markdown 编辑</h3>
+                        <p>完整的 Markdown 编辑支持，实时预览，自动保存草稿</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon-large">🖼️</div>
-                    <h3>九宫格布局</h3>
-                    <p>类朋友圈的九宫格图片展示，支持拖拽排序和实况照片</p>
+                    <div class="feature-icon-large">
+                        <span class="iconify" data-icon="mdi:view-grid" style="color: #0d59f2;"></span>
+                    </div>
+                    <div class="feature-info">
+                        <h3>九宫格布局</h3>
+                        <p>类朋友圈的九宫格图片展示，支持拖拽排序和实况照片</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon-large">🏷️</div>
-                    <h3>标签筛选</h3>
-                    <p>按标签筛选文章，支持默认标签自动选择</p>
+                    <div class="feature-icon-large">
+                        <span class="iconify" data-icon="mdi:tag-multiple" style="color: #0d59f2;"></span>
+                    </div>
+                    <div class="feature-info">
+                        <h3>标签筛选</h3>
+                        <p>按标签筛选文章，支持默认标签自动选择</p>
+                    </div>
                 </div>
             </div>
         </div>

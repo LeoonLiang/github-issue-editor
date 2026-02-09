@@ -16,6 +16,71 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: #f5f6f8;
             color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* 暗黑主题 */
+        [data-theme="dark"] body {
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .top-bar {
+            background: #1e293b;
+            border-bottom-color: #334155;
+        }
+
+        [data-theme="dark"] .back-btn {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .top-title {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .header-icon-btn {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .input-card {
+            background: #1e293b;
+        }
+
+        [data-theme="dark"] .title-input {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .title-input::placeholder {
+            color: #64748b;
+        }
+
+        [data-theme="dark"] .content-input {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .content-input::placeholder {
+            color: #64748b;
+        }
+
+        [data-theme="dark"] .bottom-toolbar {
+            background: #1e293b;
+            border-top-color: #334155;
+        }
+
+        [data-theme="dark"] .label-selector {
+            background: rgba(241, 245, 249, 0.05);
+            border-color: rgba(241, 245, 249, 0.1);
+        }
+
+        [data-theme="dark"] .label-text {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .toolbar-icon-btn {
+            color: #94a3b8;
         }
 
         /* 顶部栏 */
@@ -26,48 +91,62 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-shrink: 0;
         }
 
         .back-btn {
-            color: #0d59f2;
-            font-size: 16px;
-            font-weight: 500;
+            color: #1e293b;
+            font-size: 24px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 4px;
         }
 
         .top-title {
             font-size: 17px;
-            font-weight: 600;
+            font-weight: 700;
             color: #1e293b;
         }
 
-        .publish-btn {
-            background: #0d59f2;
-            color: white;
-            padding: 6px 16px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-icon-btn {
+            color: #64748b;
+            font-size: 22px;
             cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* 内容区域 */
         .content {
+            flex: 1;
+            overflow-y: auto;
             padding: 16px;
+        }
+
+        /* 输入框容器 */
+        .input-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
         }
 
         /* 标题输入 */
         .title-input {
-            background: #fff;
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            border: 1px solid #e2e8f0;
-            font-size: 18px;
-            font-weight: 600;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 22px;
+            font-weight: 700;
             color: #1e293b;
             width: 100%;
             outline: none;
@@ -77,79 +156,35 @@
             color: #94a3b8;
         }
 
-        /* 标签选择 */
-        .label-section {
-            background: #fff;
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-        }
-
-        .label-title {
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-
-        .selected-labels {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .label-tag {
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            background: #dbeafe;
-            color: #1e3a8a;
-            font-weight: 500;
-        }
-
-        /* 内容编辑 */
-        .editor-section {
-            background: #fff;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            min-height: 120px;
-        }
-
-        .editor-placeholder {
-            color: #94a3b8;
-            font-size: 15px;
-            line-height: 1.6;
-        }
-
-        .editor-content {
-            font-size: 15px;
+        /* 内容输入 */
+        .content-input {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 16px;
             line-height: 1.6;
             color: #1e293b;
+            width: 100%;
+            outline: none;
+            resize: none;
+            min-height: 300px;
         }
 
-        /* 九宫格图片 */
-        .images-section {
-            background: #fff;
-            border-radius: 12px;
-            padding: 16px;
+        .content-input::placeholder {
+            color: #94a3b8;
         }
 
-        .section-header {
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-
+        /* 图片网格 */
         .image-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 100px;
         }
 
         .image-item {
             aspect-ratio: 1;
-            border-radius: 8px;
+            border-radius: 16px;
             background: #f1f5f9;
             display: flex;
             align-items: center;
@@ -159,42 +194,60 @@
         }
 
         .image-item.photo {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
         .image-item.photo:nth-child(2) {
-            background: #f093fb;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
 
         .image-item.photo:nth-child(3) {
-            background: #4facfe;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
 
         .image-item.photo:nth-child(4) {
-            background: #43e97b;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
         }
 
         .image-item.photo:nth-child(5) {
-            background: #fa709a;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         }
 
         .image-item.photo:nth-child(6) {
-            background: #30cfd0;
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
         }
 
         .delete-btn {
             position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 20px;
-            height: 20px;
-            background: rgba(0, 0, 0, 0.5);
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            background: rgba(239, 68, 68, 0.9);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .select-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 32px;
+            height: 32px;
+            background: rgba(34, 197, 94, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
         }
 
         .add-btn {
@@ -208,75 +261,143 @@
             color: white;
             font-size: 40px;
         }
+
+        /* 底部工具栏 */
+        .bottom-toolbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        /* 工具按钮区 */
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            gap: 8px;
+        }
+
+        .label-selector {
+            flex: 1;
+            padding: 8px 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .label-text {
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .toolbar-icon-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* 发布按钮 */
+        .publish-btn-container {
+            padding: 8px 16px 12px;
+        }
+
+        .publish-btn {
+            width: 100%;
+            padding: 14px;
+            background: #0d59f2;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
     <!-- 顶部栏 -->
     <div class="top-bar">
         <div class="back-btn" id="backBtn">
-            <span class="iconify" data-icon="mdi:chevron-left"></span>
-            返回
+            <span class="iconify" data-icon="material-symbols:close"></span>
         </div>
-        <div class="top-title">新建文章</div>
-        <div class="publish-btn" id="publishBtn">发布</div>
+        <div class="top-title">发布文章</div>
+        <div class="header-actions">
+            <div class="header-icon-btn">
+                <span class="iconify" data-icon="material-symbols:draft-outline"></span>
+            </div>
+            <div class="header-icon-btn">
+                <span class="iconify" data-icon="material-symbols:delete-sweep-outline"></span>
+            </div>
+        </div>
     </div>
 
     <!-- 内容区域 -->
     <div class="content">
-        <!-- 标题 -->
-        <input type="text" class="title-input" placeholder="输入标题..." value="使用 Flutter 构建跨平台应用" readonly>
+        <!-- 标题卡片 -->
+        <div class="input-card">
+            <input type="text" class="title-input" placeholder="文章标题" readonly>
+        </div>
 
-        <!-- 标签 -->
-        <div class="label-section">
-            <div class="label-title">标签</div>
-            <div class="selected-labels">
-                <span class="label-tag">article</span>
+        <!-- 正文卡片 -->
+        <div class="input-card">
+            <textarea class="content-input" placeholder="开始写作..." readonly></textarea>
+        </div>
+
+        <!-- 图片网格 -->
+        <div class="image-grid">
+            <div class="image-item photo">
+                <div class="image-placeholder">🖼️</div>
+                <div class="select-btn">✓</div>
+                <div class="delete-btn">×</div>
+            </div>
+            <div class="image-item add-btn">
+                +
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部工具栏 -->
+    <div class="bottom-toolbar">
+        <!-- 工具按钮 -->
+        <div class="toolbar-actions">
+            <div class="label-selector">
+                <span class="label-text">#article</span>
+                <span class="iconify" data-icon="material-symbols:arrow-drop-down" style="color: #64748b;"></span>
+            </div>
+            <div class="toolbar-icon-btn">
+                <span class="iconify" data-icon="material-symbols:music-note-outline"></span>
+            </div>
+            <div class="toolbar-icon-btn">
+                <span class="iconify" data-icon="material-symbols:videocam-outline"></span>
+            </div>
+            <div class="toolbar-icon-btn">
+                <span class="iconify" data-icon="material-symbols:code"></span>
             </div>
         </div>
 
-        <!-- 编辑器 -->
-        <div class="editor-section">
-            <div class="editor-content">
-                本文介绍如何使用 Flutter 开发跨平台移动应用。<br><br>
-                ## 为什么选择 Flutter<br><br>
-                - 热重载提升开发效率<br>
-                - 精美的 Material Design<br>
-                - 一套代码多端运行
-            </div>
-        </div>
-
-        <!-- 九宫格图片 -->
-        <div class="images-section">
-            <div class="section-header">图片 (6)</div>
-            <div class="image-grid">
-                <div class="image-item photo">
-                    <div class="image-placeholder">🖼️</div>
-                    <div class="delete-btn">×</div>
-                </div>
-                <div class="image-item photo">
-                    <div class="image-placeholder">📸</div>
-                    <div class="delete-btn">×</div>
-                </div>
-                <div class="image-item photo">
-                    <div class="image-placeholder">🌄</div>
-                    <div class="delete-btn">×</div>
-                </div>
-                <div class="image-item photo">
-                    <div class="image-placeholder">🎨</div>
-                    <div class="delete-btn">×</div>
-                </div>
-                <div class="image-item photo">
-                    <div class="image-placeholder">🌈</div>
-                    <div class="delete-btn">×</div>
-                </div>
-                <div class="image-item photo">
-                    <div class="image-placeholder">🎭</div>
-                    <div class="delete-btn">×</div>
-                </div>
-                <div class="image-item add-btn">
-                    +
-                </div>
-            </div>
+        <!-- 发布按钮 -->
+        <div class="publish-btn-container">
+            <button class="publish-btn" id="publishBtn">
+                <span class="iconify" data-icon="material-symbols:publish"></span>
+                确认发布
+            </button>
         </div>
     </div>
 
@@ -292,6 +413,17 @@
             document.getElementById('publishBtn').addEventListener('click', () => {
                 window.parent.postMessage({ type: 'navigate', screen: 'list' }, '*');
             });
+
+            // 监听主题切换消息
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'theme-change') {
+                    document.documentElement.setAttribute('data-theme', event.data.theme);
+                }
+            });
+
+            // 初始加载时从localStorage读取主题
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
         });
     </script>
 </body>
