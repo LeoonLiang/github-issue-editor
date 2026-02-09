@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: #f5f6f8;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            background: #fff;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f5f6f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+        }
+
+        .search-icon {
+            color: #64748b;
+            font-size: 18px;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            background: none;
+            outline: none;
+            font-size: 15px;
+            color: #1e293b;
+        }
+
+        .search-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .filter-btn {
+            background: #0d59f2;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 标签栏 */
+        .tags-bar {
+            background: #fff;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .tags-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 6px 14px;
+            margin-right: 8px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .tag.active {
+            background: #0d59f2;
+            color: white;
+        }
+
+        /* 文章列表 */
+        .articles {
+            padding: 12px;
+        }
+
+        .article-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .article-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .article-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .article-date {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-left: 12px;
+        }
+
+        .article-excerpt {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .article-footer {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .article-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: #dbeafe;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            padding: 8px 0 12px;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .nav-item.active {
+            color: #0d59f2;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        /* 浮动按钮 */
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: #0d59f2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            box-shadow: 0 4px 12px rgba(13, 89, 242, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部搜索栏 -->
+    <div class="top-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" placeholder="搜索文章..." readonly>
+            <span class="filter-btn">筛选</span>
+        </div>
+    </div>
+
+    <!-- 标签栏 -->
+    <div class="tags-bar">
+        <span class="tag active">全部</span>
+        <span class="tag">article</span>
+        <span class="tag">blog</span>
+        <span class="tag">moments</span>
+        <span class="tag">travel</span>
+        <span class="tag">note</span>
+    </div>
+
+    <!-- 文章列表 -->
+    <div class="articles">
+        <div class="article-card">
+            <div class="article-header">
+                <div class="article-title">GitHub 图床功能上线啦</div>
+                <div class="article-date">2天前</div>
+            </div>
+            <div class="article-excerpt">
+                现在支持使用 GitHub 仓库作为图床，每张图片一个 commit，配合 jsDelivr CDN 加速访问...
+            </div>
+            <div class="article-footer">
+                <span class="article-tag">article</span>
+            </div>
+        </div>
+
+        <div class="article-card">
+            <div class="article-header">
+                <div class="article-title">UI 全面改版，支持深色模式</div>
+                <div class="article-date">5天前</div>
+            </div>
+            <div class="article-excerpt">
+                v2.1.0 版本带来了全新的 iOS 风格设计，支持浅色、深色和跟随系统三种主题模式...
+            </div>
+            <div class="article-footer">
+                <span class="article-tag">blog</span>
+            </div>
+        </div>
+
+        <div class="article-card">
+            <div class="article-header">
+                <div class="article-title">周末随拍</div>
+                <div class="article-date">1周前</div>
+            </div>
+            <div class="article-excerpt">
+                天气不错，带着相机出去转了转。使用新版相机功能直接拍照上传，真的很方便...
+            </div>
+            <div class="article-footer">
+                <span class="article-tag">moments</span>
+            </div>
+        </div>
+
+        <div style="height: 80px;"></div>
+    </div>
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <div class="nav-item active">
+            <div class="nav-icon">📄</div>
+            <div>文章</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">⚙️</div>
+            <div>设置</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">ℹ️</div>
+            <div>关于</div>
+        </div>
+    </div>
+
+    <!-- 浮动按钮 -->
+    <div class="fab">✏️</div>
+</body>
+</html>

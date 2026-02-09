@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Issue Editor - GitHub Issues 管理神器</title>
+    <meta name="description" content="一款优雅的 GitHub Issues 管理应用，支持 Markdown 编辑、多种图床、九宫格图片上传">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/phone-mock.css">
+</head>
+<body>
+    <!-- Hero 区域 -->
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">GitHub Issue Editor</h1>
+                <p class="hero-subtitle">优雅的 GitHub Issues 管理应用</p>
+                <p class="hero-description">
+                    支持 Markdown 编辑、多图床并行上传、九宫格布局、主题切换<br>
+                    让你的博客创作更加高效
+                </p>
+                <div class="hero-buttons">
+                    <a href="https://github.com/LeoonLiang/github-issue-editor/releases/latest" class="btn btn-primary" target="_blank">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 2L3 7L3 16L10 18L17 16V7L10 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M10 11V18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        下载 APK
+                    </a>
+                    <a href="https://github.com/LeoonLiang/github-issue-editor" class="btn btn-secondary" target="_blank">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" fill="currentColor"/>
+                        </svg>
+                        查看源码
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 演示区域 -->
+    <section class="demo-section">
+        <div class="container">
+            <div class="demo-content">
+                <!-- 手机模拟器 -->
+                <div class="phone-mock-wrapper">
+                    <div class="phone-mock" id="phoneMock">
+                        <div class="phone-frame">
+                            <div class="phone-notch"></div>
+                            <div class="phone-screen">
+                                <iframe id="phoneScreen" src="mock-screens/list.html" frameborder="0"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能导航 -->
+                <div class="feature-nav">
+                    <button class="feature-btn active" data-screen="list">
+                        <span class="feature-icon">📱</span>
+                        <span class="feature-label">文章列表</span>
+                    </button>
+                    <button class="feature-btn" data-screen="publish">
+                        <span class="feature-icon">✍️</span>
+                        <span class="feature-label">发布文章</span>
+                    </button>
+                    <button class="feature-btn" data-screen="settings">
+                        <span class="feature-icon">⚙️</span>
+                        <span class="feature-label">设置</span>
+                    </button>
+                    <button class="feature-btn" data-screen="theme">
+                        <span class="feature-icon">🌓</span>
+                        <span class="feature-label">主题对比</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 功能特性 -->
+    <section class="features-section">
+        <div class="container">
+            <h2 class="section-title">核心特性</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon-large">🌐</div>
+                    <h3>多种图床支持</h3>
+                    <p>支持 S3 兼容存储和 GitHub 图床，可同时启用多个图床并行上传</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-large">🎨</div>
+                    <h3>iOS 风格设计</h3>
+                    <p>全新的 iOS 风格 UI，支持浅色/深色/跟随系统三种主题模式</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-large">📸</div>
+                    <h3>相机拍照</h3>
+                    <p>支持相机拍照，拍照后可选择直接上传或使用编辑器编辑</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-large">📝</div>
+                    <h3>Markdown 编辑</h3>
+                    <p>完整的 Markdown 编辑支持，实时预览，自动保存草稿</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-large">🖼️</div>
+                    <h3>九宫格布局</h3>
+                    <p>类朋友圈的九宫格图片展示，支持拖拽排序和实况照片</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon-large">🏷️</div>
+                    <h3>标签筛选</h3>
+                    <p>按标签筛选文章，支持默认标签自动选择</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA 区域 -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>立即开始使用</h2>
+            <p>下载最新版本，体验优雅的博客创作体验</p>
+            <a href="https://github.com/LeoonLiang/github-issue-editor/releases/latest" class="btn btn-primary btn-large" target="_blank">
+                下载 v2.1.0
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <h3>GitHub Issue Editor</h3>
+                    <p>让博客创作更加优雅</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>产品</h4>
+                        <a href="#features">功能特性</a>
+                        <a href="https://github.com/LeoonLiang/github-issue-editor/releases" target="_blank">版本历史</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>社区</h4>
+                        <a href="https://github.com/LeoonLiang/github-issue-editor" target="_blank">GitHub</a>
+                        <a href="https://github.com/LeoonLiang/github-issue-editor/issues" target="_blank">反馈问题</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 GitHub Issue Editor. Made with ❤️ by <a href="https://github.com/leoonliang" target="_blank">leoonliang</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/phone-demo.js"></script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: #f5f6f8;
+            color: #1e293b;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            background: #fff;
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .top-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* 内容区域 */
+        .content {
+            padding: 16px;
+        }
+
+        /* 分组标题 */
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+            padding: 0 8px;
+        }
+
+        /* 设置卡片 */
+        .settings-card {
+            background: #fff;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+
+        .setting-icon.blue {
+            background: #dbeafe;
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .setting-subtitle {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .setting-subtitle.highlight {
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        .setting-arrow {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .badge {
+            background: #10b981;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部栏 -->
+    <div class="top-bar">
+        <div class="top-title">设置</div>
+    </div>
+
+    <!-- 内容区域 -->
+    <div class="content">
+        <!-- GitHub 配置 -->
+        <div class="section-title">GitHub</div>
+        <div class="settings-card">
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>🐙</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">GitHub 仓库</div>
+                    <div class="setting-subtitle">leoonliang/blog</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+        </div>
+
+        <!-- 媒体存储 -->
+        <div class="section-title">媒体存储</div>
+        <div class="settings-card">
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>☁️</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">对象存储配置</div>
+                    <div class="setting-subtitle">2个配置, 2个已启用</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>🐙</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">
+                        GitHub 图床
+                        <span class="badge">NEW</span>
+                    </div>
+                    <div class="setting-subtitle highlight">leoonliang/images (已启用)</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>📁</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">
+                        默认存储路径
+                        <span class="badge">NEW</span>
+                    </div>
+                    <div class="setting-subtitle">图片: img/ • 视频: video/</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+        </div>
+
+        <!-- 编辑器配置 -->
+        <div class="section-title">编辑器配置</div>
+        <div class="settings-card">
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>🖼️</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">图片回显域名</div>
+                    <div class="setting-subtitle">cdn.example.com</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>🏷️</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">默认标签</div>
+                    <div class="setting-subtitle">article</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+        </div>
+
+        <!-- 外观 -->
+        <div class="section-title">外观</div>
+        <div class="settings-card">
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>🎨</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">主题</div>
+                    <div class="setting-subtitle">跟随系统</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+        </div>
+
+        <!-- 维护 -->
+        <div class="section-title">维护</div>
+        <div class="settings-card">
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>💾</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">备份与恢复</div>
+                    <div class="setting-subtitle">导出或导入本地配置</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+            <div class="setting-item">
+                <div class="setting-icon blue">
+                    <span>🔄</span>
+                </div>
+                <div class="setting-info">
+                    <div class="setting-title">检查更新</div>
+                    <div class="setting-subtitle">当前版本: v2.1.0</div>
+                </div>
+                <div class="setting-arrow">›</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

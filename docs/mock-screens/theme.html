@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主题对比</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: #f5f6f8;
+            overflow: hidden;
+        }
+
+        .split-view {
+            display: flex;
+            height: 100vh;
+        }
+
+        .theme-side {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .theme-side.light {
+            background: #f5f6f8;
+        }
+
+        .theme-side.dark {
+            background: #101622;
+        }
+
+        /* 分隔线 */
+        .divider {
+            width: 2px;
+            background: linear-gradient(to bottom, #e2e8f0 0%, #334155 100%);
+            position: relative;
+        }
+
+        .divider-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0d59f2;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(13, 89, 242, 0.3);
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            padding: 12px 16px;
+            border-bottom: 1px solid;
+        }
+
+        .light .top-bar {
+            background: #fff;
+            border-color: #e2e8f0;
+        }
+
+        .dark .top-bar {
+            background: #1b2333;
+            border-color: #334155;
+        }
+
+        .top-title {
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .light .top-title {
+            color: #1e293b;
+        }
+
+        .dark .top-title {
+            color: #ffffff;
+        }
+
+        /* 内容区域 */
+        .content {
+            padding: 12px;
+        }
+
+        /* 文章卡片 */
+        .article-card {
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .light .article-card {
+            background: #fff;
+        }
+
+        .dark .article-card {
+            background: #1b2333;
+        }
+
+        .article-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .light .article-title {
+            color: #1e293b;
+        }
+
+        .dark .article-title {
+            color: #ffffff;
+        }
+
+        .article-excerpt {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .light .article-excerpt {
+            color: #64748b;
+        }
+
+        .dark .article-excerpt {
+            color: #9ca6ba;
+        }
+
+        .article-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .light .article-tag {
+            background: #dbeafe;
+            color: #1e3a8a;
+        }
+
+        .dark .article-tag {
+            background: #1e3a8a;
+            color: #dbeafe;
+        }
+
+        /* 主题标签 */
+        .theme-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .light .theme-badge {
+            background: #fff;
+            color: #0d59f2;
+            border: 1px solid #e2e8f0;
+        }
+
+        .dark .theme-badge {
+            background: #1b2333;
+            color: #0d59f2;
+            border: 1px solid #334155;
+        }
+    </style>
+</head>
+<body>
+    <div class="split-view">
+        <!-- 浅色主题 -->
+        <div class="theme-side light">
+            <div class="theme-badge">☀️ 浅色</div>
+            <div class="top-bar">
+                <div class="top-title">文章列表</div>
+            </div>
+            <div class="content">
+                <div class="article-card">
+                    <div class="article-title">GitHub 图床功能上线</div>
+                    <div class="article-excerpt">
+                        现在支持使用 GitHub 仓库作为图床，每张图片一个 commit，配合 CDN 加速访问...
+                    </div>
+                    <div class="article-tag">article</div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">UI 全面改版</div>
+                    <div class="article-excerpt">
+                        v2.1.0 版本带来了全新的 iOS 风格设计，支持浅色、深色和跟随系统三种主题模式...
+                    </div>
+                    <div class="article-tag">blog</div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">周末随拍</div>
+                    <div class="article-excerpt">
+                        天气不错，带着相机出去转了转。使用新版相机功能直接拍照上传，真的很方便...
+                    </div>
+                    <div class="article-tag">moments</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分隔线 -->
+        <div class="divider">
+            <div class="divider-label">🌓 主题切换</div>
+        </div>
+
+        <!-- 深色主题 -->
+        <div class="theme-side dark">
+            <div class="theme-badge">🌙 深色</div>
+            <div class="top-bar">
+                <div class="top-title">文章列表</div>
+            </div>
+            <div class="content">
+                <div class="article-card">
+                    <div class="article-title">GitHub 图床功能上线</div>
+                    <div class="article-excerpt">
+                        现在支持使用 GitHub 仓库作为图床，每张图片一个 commit，配合 CDN 加速访问...
+                    </div>
+                    <div class="article-tag">article</div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">UI 全面改版</div>
+                    <div class="article-excerpt">
+                        v2.1.0 版本带来了全新的 iOS 风格设计，支持浅色、深色和跟随系统三种主题模式...
+                    </div>
+                    <div class="article-tag">blog</div>
+                </div>
+
+                <div class="article-card">
+                    <div class="article-title">周末随拍</div>
+                    <div class="article-excerpt">
+                        天气不错，带着相机出去转了转。使用新版相机功能直接拍照上传，真的很方便...
+                    </div>
+                    <div class="article-tag">moments</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
