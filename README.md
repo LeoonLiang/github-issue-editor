@@ -1,6 +1,48 @@
 # GitHub Issue Editor
 
-这是一款增删差改 github issue 的 app，如果你是通过 issue 管理博客完整的话 ，他将可以帮助你快速发出图文风格的文章。
+<div align="center">
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.5.2+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.5.2+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
+[![License](https://img.shields.io/badge/license-Personal%20Use-blue)](#-许可证)
+[![Platform](https://img.shields.io/badge/platform-Android-green)](https://www.android.com)
+
+**一款优雅的 GitHub Issues 移动端编辑器，专为通过 Issues 管理博客的用户打造**
+
+[在线演示](https://leoonliang.github.io/github-issue-editor/) • [功能特性](#-特性) • [快速开始](#-开始使用) • [下载 APK](https://github.com/leoonliang/github-issue-editor/releases)
+
+</div>
+
+---
+
+## 📱 应用简介
+
+GitHub Issue Editor 是一款专为移动端优化的 GitHub Issues 管理工具，如果你通过 GitHub Issues 管理博客，它将帮助你快速发布图文并茂的精美文章。
+
+### ✨ 核心亮点
+
+- 🎨 **全新 iOS 风格 UI** - 精致的现代化设计，支持浅色/深色主题
+- 📸 **强大的媒体支持** - 支持多图上传、视频、实况照片、拖拽排序
+- ☁️ **灵活的图床方案** - 支持 S3 兼容存储和 GitHub 图床，可并行上传
+- 💾 **智能草稿系统** - 自动保存，永不丢失创作内容
+- 🔄 **无限滚动加载** - 流畅浏览所有文章
+- 🏷️ **标签筛选** - 快速定位目标文章
+
+## 📸 应用截图
+
+<div align="center">
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/list.jpg" width="250" alt="文章列表"/><br/><sub><b>文章列表</b></sub></td>
+    <td align="center"><img src="docs/images/publish.jpg" width="250" alt="发布文章"/><br/><sub><b>发布文章</b></sub></td>
+    <td align="center"><img src="docs/images/setting.jpg" width="250" alt="设置页面"/><br/><sub><b>设置页面</b></sub></td>
+  </tr>
+</table>
+
+**[👉 在线交互演示](https://leoonliang.github.io/github-issue-editor/)** - 在浏览器中体验完整功能
+
+</div>
 
 ## ✨ 特性
 
@@ -85,7 +127,13 @@
 
 ## 🚀 开始使用
 
-### 前置要求
+### 方式一：直接下载 APK（推荐）
+
+前往 [Releases](https://github.com/leoonliang/github-issue-editor/releases) 页面下载最新版本的 APK 文件，直接安装即可使用。
+
+### 方式二：从源码编译
+
+#### 前置要求
 
 - Flutter SDK >= 3.5.2
 - Dart SDK >= 3.5.2
@@ -135,21 +183,35 @@
    flutter run
    ```
 
-## 📦 主要依赖
+## 🛠️ 技术栈
 
-| 依赖包 | 用途 |
-|-------|------|
-| flutter_riverpod | 状态管理 |
-| flutter_quill | 富文本编辑器 |
-| image_picker | 图片/视频选择 |
-| photo_manager | 相册管理 |
-| video_player | 视频播放 |
-| aws_s3_api | AWS S3 文件上传 |
-| cached_network_image | 图片缓存 |
-| thumbhash | 图片占位符 |
-| reorderables | 拖拽排序 |
-| package_info_plus | 应用版本信息 |
-| url_launcher | 打开外部链接 |
+### 核心框架
+- **Flutter** - Google 开发的跨平台 UI 框架
+- **Dart** - Flutter 使用的编程语言
+- **Riverpod** - 先进的状态管理解决方案
+
+### 主要功能库
+
+| 依赖包 | 版本 | 用途 |
+|-------|------|------|
+| flutter_riverpod | ^2.6.1 | 状态管理 |
+| flutter_quill | - | Markdown 富文本编辑 |
+| image_picker | - | 图片/视频选择 |
+| photo_manager | - | 相册管理 |
+| video_player | - | 视频播放 |
+| aws_s3_api | - | S3 兼容对象存储上传 |
+| cached_network_image | - | 网络图片缓存 |
+| thumbhash | - | 图片模糊占位符 |
+| reorderables | - | 拖拽排序 |
+| package_info_plus | - | 应用版本信息 |
+| url_launcher | - | 打开外部链接 |
+| photo_view | - | 图片预览和缩放 |
+| pro_image_editor | - | 图片编辑功能 |
+
+### UI & 设计
+- **Material Design** - Google 设计语言
+- **iOS 风格设计** - 底部抽屉、圆角卡片等现代化 UI 元素
+- **主题系统** - 支持浅色/深色/跟随系统
 
 ## 🏗️ 项目结构
 
@@ -342,20 +404,119 @@ lib/
 - 如有新版本，会显示更新说明和下载链接
 - 支持直接下载 APK 文件（Android）
 
+## 🗺️ 开发路线
+
+- [ ] iOS 平台完整适配和测试
+- [ ] 其他 Android 品牌手机适配
+- [ ] 图片压缩和优化功能
+- [ ] 更多 Markdown 编辑功能
+- [ ] 评论管理功能
+- [ ] 文章统计和分析
+- [ ] 批量操作支持
+
+## ❓ 常见问题
+
+<details>
+<summary><b>为什么选择通过 GitHub Issues 管理博客？</b></summary>
+
+- ✅ 免费且稳定的内容存储
+- ✅ 自带评论系统（Issue Comments）
+- ✅ 自动版本控制和历史记录
+- ✅ 支持 Markdown 格式
+- ✅ 可以通过 GitHub Pages 或其他静态网站生成器展示
+- ✅ 支持 GitHub Actions 自动化部署
+
+</details>
+
+<details>
+<summary><b>图床选择建议？</b></summary>
+
+**小流量博客（推荐 GitHub 图床）：**
+- 免费且稳定
+- 配置简单
+- 支持 CDN 加速（jsDelivr、Statically 等）
+
+**高流量博客或大量图片（推荐对象存储）：**
+- 访问速度更快
+- 流量控制更灵活
+- 支持更多功能（如图片处理）
+
+**最佳实践：**
+- 同时启用 GitHub 图床和对象存储
+- 系统会并行上传，确保至少一个成功
+- 提供更好的可靠性
+
+</details>
+
+<details>
+<summary><b>为什么实况照片只支持小米手机？</b></summary>
+
+实况照片（Live Photo）功能依赖于手机厂商的实现方式。目前仅在小米手机上进行了完整测试和适配。其他品牌的实况照片格式可能不同，暂未验证兼容性。
+
+</details>
+
+<details>
+<summary><b>如何备份我的配置？</b></summary>
+
+1. 打开应用，进入**设置** → **维护** → **备份与恢复**
+2. 点击**导出配置**
+3. 复制生成的 JSON 配置并保存到安全位置
+4. 需要恢复时，使用**导入配置**功能粘贴 JSON 即可
+
+</details>
+
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
+### 如何贡献
+
+1. Fork 本仓库
+2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开一个 Pull Request
+
+### 开发规范
+
+- 遵循 Flutter 官方代码规范
+- 提交前运行 `flutter analyze` 和 `flutter test`
+- Pull Request 请提供清晰的描述和测试说明
+
 ## 👨‍💻 作者
 
 **leoonliang**
-- Email: dsleoon@gmail.com
-- GitHub: [@leoonliang](https://github.com/leoonliang)
+- 📧 Email: dsleoon@gmail.com
+- 🐙 GitHub: [@leoonliang](https://github.com/leoonliang)
+- 🌐 在线演示: [GitHub Pages](https://leoonliang.github.io/github-issue-editor/)
 
 ## 📄 许可证
 
 本项目仅供个人学习和研究使用。
 
+## 🔗 相关链接
+
+- [GitHub Issues API 文档](https://docs.github.com/en/rest/issues)
+- [Flutter 官方文档](https://flutter.dev/docs)
+- [AWS S3 API 文档](https://docs.aws.amazon.com/s3/)
+- [jsDelivr CDN](https://www.jsdelivr.com/) - GitHub 图床加速方案
+
+## ⭐ Star 历史
+
+如果这个项目对你有帮助，请给一个 Star ⭐️
+
+[![Star History Chart](https://api.star-history.com/svg?repos=leoonliang/github-issue-editor&type=Date)](https://star-history.com/#leoonliang/github-issue-editor&Date)
+
+
+## 💝 致谢
+
+感谢以下开源项目：
+
+- [Flutter](https://flutter.dev) - 优秀的跨平台框架
+- [Riverpod](https://riverpod.dev) - 强大的状态管理
+- [Flutter Quill](https://github.com/singerdmx/flutter-quill) - 富文本编辑器
+- [Pro Image Editor](https://github.com/hm21/pro_image_editor) - 图片编辑功能
+- 以及所有其他依赖库的作者们
 
 ## 📝 更新日志
 
