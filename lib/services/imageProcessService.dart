@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:convert';
 import 'dart:math';
@@ -13,6 +14,46 @@ import '../models/app_config.dart';
 import 'ossService.dart';
 import 'github_image_service.dart';
 import 'image_edit_service.dart';
+
+/// 在独立 isolate 中执行图片解码、尺寸获取和 thumbhash 生成（顶层函数）
+Map<String, dynamic> _computeImageMetadata(Uint8List bytes) {
+  try {
+    final decodedImage = img.decodeImage(bytes);
+    if (decodedImage == null) {
+      return {'width': 0, 'height': 0, 'thumbhash': ''};
+    }
+
+    final width = decodedImage.width;
+    final height = decodedImage.height;
+
+    // 生成缩略图用于 ThumbHash（最大 100x100，等比缩放）
+    final thumbWidth = width > height ? 100 : (100 * width ~/ height);
+    final thumbHeight = height > width ? 100 : (100 * height ~/ width);
+
+    final thumbnail = img.copyResize(
+      decodedImage,
+      width: thumbWidth,
+      height: thumbHeight,
+    );
+
+    final rgbaBytes =
+        Uint8List.fromList(thumbnail.getBytes(format: img.Format.rgba));
+
+    final thumbhashBytes = Thumbhash.rgbaToThumbHash(
+      thumbnail.width,
+      thumbnail.height,
+      rgbaBytes,
+    );
+
+    return {
+      'width': width,
+      'height': height,
+      'thumbhash': base64.encode(thumbhashBytes),
+    };
+  } catch (e) {
+    return {'width': 0, 'height': 0, 'thumbhash': ''};
+  }
+}
 
 /// 图片处理服务 - 负责图片压缩、thumbhash 生成、实况照片处理等
 class ImageProcessService {
@@ -130,60 +171,15 @@ class ImageProcessService {
     }
   }
 
-  /// 生成 thumbhash
-  Future<String> _generateThumbhash(File imageFile) async {
+  /// 在独立 isolate 中获取图片尺寸和生成 thumbhash（避免阻塞 UI 线程）
+  Future<Map<String, dynamic>> _getImageMetadataInIsolate(File imageFile) async {
     try {
       final bytes = await imageFile.readAsBytes();
-      final decodedImage = img.decodeImage(bytes);
-
-      if (decodedImage == null) return '';
-
-      final width = decodedImage.width;
-      final height = decodedImage.height;
-
-      // 生成缩略图用于 ThumbHash（最大 100x100，等比缩放）
-      final thumbWidth = width > height ? 100 : (100 * width ~/ height);
-      final thumbHeight = height > width ? 100 : (100 * height ~/ width);
-
-      final thumbnail = img.copyResize(
-        decodedImage,
-        width: thumbWidth,
-        height: thumbHeight,
-      );
-
-      // RGBA 数据
-      final rgbaBytes =
-          Uint8List.fromList(thumbnail.getBytes(format: img.Format.rgba));
-
-      final thumbhashBytes = Thumbhash.rgbaToThumbHash(
-        thumbnail.width,
-        thumbnail.height,
-        rgbaBytes,
-      );
-
-      return base64.encode(thumbhashBytes);
+      return await Isolate.run(() => _computeImageMetadata(bytes));
     } catch (e) {
-      print('Error generating thumbhash: $e');
-      return '';
+      print('Error getting image metadata: $e');
+      return {'width': 0, 'height': 0, 'thumbhash': ''};
     }
-  }
-
-  /// 获取图片尺寸
-  Future<Map<String, int>> _getImageDimensions(File imageFile) async {
-    try {
-      final bytes = await imageFile.readAsBytes();
-      final decodedImage = img.decodeImage(bytes);
-
-      if (decodedImage != null) {
-        return {
-          'width': decodedImage.width,
-          'height': decodedImage.height,
-        };
-      }
-    } catch (e) {
-      print('Error getting image dimensions: $e');
-    }
-    return {'width': 0, 'height': 0};
   }
 
   /// 处理单张图片并上传（核心方法）
@@ -454,12 +450,12 @@ class ImageProcessService {
 
     if (finalImageFile != null) {
       print('处理最终图片文件: ${finalImageFile.path}');
-      final dimensions = await _getImageDimensions(finalImageFile);
-      width = dimensions['width']!;
-      height = dimensions['height']!;
+      final metadata = await _getImageMetadataInIsolate(finalImageFile);
+      width = metadata['width'] as int;
+      height = metadata['height'] as int;
       print('图片尺寸: ${width}x$height');
 
-      thumbhash = await _generateThumbhash(finalImageFile);
+      thumbhash = metadata['thumbhash'] as String;
       print('thumbhash: $thumbhash');
     }
 

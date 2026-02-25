@@ -28,7 +28,7 @@ class OssService {
     }
 
     print('读取文件字节...');
-    final fileBytes = file.readAsBytesSync();
+    final fileBytes = await file.readAsBytes();
     print('文件大小: ${fileBytes.length} bytes');
 
     final uploadResults = <String, String>{};

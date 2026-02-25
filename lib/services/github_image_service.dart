@@ -23,7 +23,7 @@ class GitHubImageService {
     }
 
     // 读取文件并 Base64 编码
-    final fileBytes = file.readAsBytesSync();
+    final fileBytes = await file.readAsBytes();
     final base64Content = base64Encode(fileBytes);
 
     // 直接使用 fileName（已包含 img/ 或 video/ 路径）

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,6 +8,58 @@ import 'package:motion_photos/motion_photos.dart';
 import 'package:video_player/video_player.dart';
 import 'photo_preview_page.dart';
 import '../services/image_edit_service.dart';
+
+/// 全局 live photo 检测缓存（避免重复检测）
+final Map<String, bool> _livePhotoCache = {};
+
+/// 通知 widget 缓存已更新（widget 监听此 notifier 来刷新 UI）
+final ValueNotifier<int> _livePhotoCacheVersion = ValueNotifier<int>(0);
+
+/// 批量预检测 live photo（在加载照片后后台调用）
+/// iOS: 通过 asset.subtype 元数据判断，零 I/O
+/// Android: 通过 MotionPhotos 库逐个检测，带并发控制
+Future<void> _batchDetectLivePhotos(List<AssetEntity> assets) async {
+  // 过滤掉视频和已缓存的
+  final toCheck = assets.where((a) =>
+    a.type != AssetType.video && !_livePhotoCache.containsKey(a.id)
+  ).toList();
+
+  if (toCheck.isEmpty) return;
+
+  if (Platform.isIOS) {
+    // iOS: subtype bit 3 (值 8) 表示 Live Photo，纯元数据，瞬间完成
+    for (final asset in toCheck) {
+      _livePhotoCache[asset.id] = (asset.subtype & 8) != 0;
+    }
+    _livePhotoCacheVersion.value++;
+    return;
+  }
+
+  // Android: 需要读文件检测，每次 2 个并发，分批处理避免卡顿
+  for (var i = 0; i < toCheck.length; i += 2) {
+    final batch = toCheck.skip(i).take(2).toList();
+    await Future.wait(batch.map(_detectSingleLivePhoto));
+    _livePhotoCacheVersion.value++;
+  }
+}
+
+/// 检测单个 asset 是否为 live photo (Android)
+Future<void> _detectSingleLivePhoto(AssetEntity asset) async {
+  try {
+    final file = await asset.originFile;
+    if (file == null) {
+      _livePhotoCache[asset.id] = false;
+      return;
+    }
+    final isLive = await Future.any([
+      MotionPhotos(file.path).isMotionPhoto(),
+      Future.delayed(const Duration(milliseconds: 800), () => false),
+    ]);
+    _livePhotoCache[asset.id] = isLive;
+  } catch (e) {
+    _livePhotoCache[asset.id] = false;
+  }
+}
 
 /// 选中的图片信息（包含实况选项）
 class SelectedImageInfo {
@@ -54,7 +107,7 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
   bool _isLoadingMore = false;
   int _currentPage = 1; // 已加载的页数(从1开始,因为第0页已经加载)
   int _totalCount = 0; // 相册总照片数
-  static const int _pageSize = 500; // 每页加载500张
+  static const int _pageSize = 80; // 每页加载80张
 
   @override
   void initState() {
@@ -325,7 +378,7 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
       }
 
       // 首次加载，加载第一页
-      final int firstPageSize = _totalCount > 1000 ? 1000 : _totalCount;
+      final int firstPageSize = _totalCount > _pageSize ? _pageSize : _totalCount;
 
       // 按时间倒序加载（最新的照片在前面）
       final List<AssetEntity> media = await album.getAssetListRange(
@@ -343,6 +396,8 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
           _currentPage = firstPageSize ~/ _pageSize; // 计算已加载的页数
           _isLoading = false;
         });
+        // 后台批量预检测 live photo（不阻塞 UI）
+        _batchDetectLivePhotos(media);
       }
     } catch (e, stackTrace) {
       print('Error loading album photos: $e');
@@ -386,6 +441,8 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
           _currentPage++;
           _isLoadingMore = false;
         });
+        // 后台批量预检测新加载的 live photo
+        _batchDetectLivePhotos(moreMedia);
       }
     } catch (e) {
       print('Error loading more photos: $e');
@@ -641,24 +698,6 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
               ? const Center(child: Text('没有照片'))
               : Column(
                   children: [
-                    // 照片数量显示
-                    if (_totalCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        color: Colors.grey[200],
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '已加载 ${_mediaList.length} / $_totalCount 张照片',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     // 照片网格
                     Expanded(
                       child: GridView.builder(
@@ -785,31 +824,33 @@ class _PhotoItem extends StatefulWidget {
   State<_PhotoItem> createState() => _PhotoItemState();
 }
 
-class _PhotoItemState extends State<_PhotoItem> with AutomaticKeepAliveClientMixin {
-  bool _isLivePhoto = false;
-  bool _isChecking = false;
-  bool _hasChecked = false;
+class _PhotoItemState extends State<_PhotoItem> {
   Uint8List? _cachedThumbnail;
 
-  @override
-  bool get wantKeepAlive => true; // 保持状态，避免重建
+  bool get _isLivePhoto => _livePhotoCache[widget.asset.id] == true;
 
   @override
   void initState() {
     super.initState();
-    // 立即开始检测实况照片（异步，避免阻塞UI）
-    _checkIfLivePhoto();
     _loadThumbnail();
+    _livePhotoCacheVersion.addListener(_onCacheUpdated);
+  }
+
+  @override
+  void dispose() {
+    _livePhotoCacheVersion.removeListener(_onCacheUpdated);
+    super.dispose();
+  }
+
+  void _onCacheUpdated() {
+    if (mounted) setState(() {});
   }
 
   @override
   void didUpdateWidget(_PhotoItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 如果asset变化了，重新加载
     if (oldWidget.asset != widget.asset) {
-      _hasChecked = false;
       _cachedThumbnail = null;
-      _checkIfLivePhoto();
       _loadThumbnail();
     }
   }
@@ -830,47 +871,6 @@ class _PhotoItemState extends State<_PhotoItem> with AutomaticKeepAliveClientMix
     }
   }
 
-  /// 检查是否为实况照片
-  Future<void> _checkIfLivePhoto() async {
-    if (_isChecking || _hasChecked) return;
-
-    setState(() => _isChecking = true);
-
-    try {
-      final file = await widget.asset.file;
-      if (file != null && mounted) {
-        // 添加超时机制，避免卡住
-        final isLive = await Future.any([
-          MotionPhotos(file.path).isMotionPhoto(),
-          Future.delayed(const Duration(milliseconds: 500), () => false),
-        ]);
-
-        if (mounted) {
-          setState(() {
-            _isLivePhoto = isLive;
-            _isChecking = false;
-            _hasChecked = true;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isChecking = false;
-            _hasChecked = true;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error checking live photo: $e');
-      if (mounted) {
-        setState(() {
-          _isChecking = false;
-          _hasChecked = true;
-        });
-      }
-    }
-  }
-
   /// 格式化视频时长
   String _formatDuration(int seconds) {
     final duration = Duration(seconds: seconds);
@@ -887,8 +887,6 @@ class _PhotoItemState extends State<_PhotoItem> with AutomaticKeepAliveClientMix
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // 必须调用，AutomaticKeepAliveClientMixin要求
-
     return GestureDetector(
       onTap: widget.onTap, // 点击预览
       onLongPress: widget.onLongPress, // 长按选择
@@ -916,7 +914,7 @@ class _PhotoItemState extends State<_PhotoItem> with AutomaticKeepAliveClientMix
             ),
 
           // Live Photo 标记（左下角，仅实况照片）
-          if (!_isChecking && _isLivePhoto && widget.asset.type != AssetType.video)
+          if (_isLivePhoto && widget.asset.type != AssetType.video)
             Positioned(
               left: 4,
               bottom: 4,
