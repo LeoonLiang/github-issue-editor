@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import 'dart:convert';
 import '../providers/config_provider.dart';
 import '../providers/theme_provider.dart';
@@ -1254,8 +1255,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
+          isDismissible: false,
+          enableDrag: false,
           backgroundColor: Colors.transparent,
-          builder: (context) => Container(
+          builder: (context) {
+            // 下载状态变量
+            double downloadProgress = 0;
+            int downloadReceived = 0;
+            int downloadTotal = -1;
+            String? downloadedPath;
+            bool isDownloading = false;
+            String? downloadError;
+            String downloadingSource = '';
+
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                return Container(
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
@@ -1379,68 +1394,101 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   SizedBox(height: 24),
 
+                  // 下载进度条（下载中显示）
+                  if (isDownloading) ...[
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            downloadTotal > 0
+                                ? '正在从${downloadingSource}下载... ${(downloadProgress * 100).toStringAsFixed(1)}%'
+                                : '正在从${downloadingSource}下载... ${(downloadReceived / 1024 / 1024).toStringAsFixed(1)} MB',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white.withOpacity(0.7) : Colors.black.withOpacity(0.7),
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: downloadTotal > 0 ? downloadProgress : null,
+                              minHeight: 8,
+                              backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                  ],
+
+                  // 下载错误提示
+                  if (downloadError != null) ...[
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        '下载失败: $downloadError',
+                        style: TextStyle(fontSize: 14, color: AppColors.error),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                  ],
+
                   // 底部按钮
                   Padding(
                     padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: isDark
-                                  ? Colors.white.withOpacity(0.1)
-                                  : Colors.black.withOpacity(0.05),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              '取消',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              final uri = Uri.parse(downloadUrl);
-                              if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                              }
+                    child: _buildUpdateButtons(
+                      isDark: isDark,
+                      isDownloading: isDownloading,
+                      downloadedPath: downloadedPath,
+                      downloadUrl: downloadUrl,
+                      setSheetState: setSheetState,
+                      onStartDownload: (String url, String source) async {
+                        setSheetState(() {
+                          isDownloading = true;
+                          downloadProgress = 0;
+                          downloadError = null;
+                          downloadingSource = source;
+                        });
+                        try {
+                          final path = await versionService.downloadApk(
+                            url,
+                            (received, total) {
+                              setSheetState(() {
+                                downloadReceived = received;
+                                downloadTotal = total;
+                                if (total > 0) {
+                                  downloadProgress = received / total;
+                                }
+                              });
                             },
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              '下载更新',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                          );
+                          setSheetState(() {
+                            isDownloading = false;
+                            downloadedPath = path;
+                          });
+                          // 下载完成自动触发安装
+                          await OpenFilex.open(path);
+                        } catch (e) {
+                          setSheetState(() {
+                            isDownloading = false;
+                            downloadError = e.toString();
+                          });
+                        }
+                      },
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+          );
+              },
+            );
+          },
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1464,6 +1512,87 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() => _isCheckingUpdate = false);
       }
     }
+  }
+
+  /// 构建更新弹窗底部按钮
+  Widget _buildUpdateButtons({
+    required bool isDark,
+    required bool isDownloading,
+    required String? downloadedPath,
+    required String downloadUrl,
+    required StateSetter setSheetState,
+    required Future<void> Function(String url, String source) onStartDownload,
+  }) {
+    // 下载完成 → 安装按钮
+    if (downloadedPath != null) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () async {
+            await OpenFilex.open(downloadedPath);
+          },
+          icon: Icon(Icons.install_mobile, size: 20),
+          label: Text('立即安装', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: AppColors.success,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      );
+    }
+
+    // 下载中 → 禁用按钮
+    if (isDownloading) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: null,
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('下载中...', style: TextStyle(fontSize: 16)),
+        ),
+      );
+    }
+
+    // 默认 → 两个下载按钮
+    final acceleratedUrl = VersionService.getAcceleratedUrl(downloadUrl);
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => onStartDownload(acceleratedUrl, '加速节点'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('加速下载', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: TextButton(
+            onPressed: () => onStartDownload(downloadUrl, 'GitHub'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              'GitHub下载',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   /// 显示主题选择对话框

@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 /// 版本更新服务
 class VersionService {
@@ -81,5 +83,46 @@ class VersionService {
     }
 
     return false;
+  }
+
+  /// 生成加速下载链接
+  static String getAcceleratedUrl(String originalUrl) {
+    return 'https://down.npee.cn/?$originalUrl';
+  }
+
+  /// 下载 APK 文件（带进度回调）
+  /// 返回下载后的本地文件路径
+  Future<String> downloadApk(
+    String url,
+    void Function(int received, int total) onProgress,
+  ) async {
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse(url));
+      final response = await client.send(request);
+
+      if (response.statusCode != 200) {
+        throw Exception('下载失败 (${response.statusCode})');
+      }
+
+      final total = response.contentLength ?? -1;
+      int received = 0;
+
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/update.apk';
+      final file = File(filePath);
+      final sink = file.openWrite();
+
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+        onProgress(received, total);
+      }
+
+      await sink.close();
+      return filePath;
+    } finally {
+      client.close();
+    }
   }
 }
