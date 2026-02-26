@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:motion_photos/motion_photos.dart';
 import 'package:video_player/video_player.dart';
@@ -109,6 +110,9 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
   int _totalCount = 0; // 相册总照片数
   static const int _pageSize = 80; // 每页加载80张
 
+  // 【优化】滚动节流 Timer，避免频繁触发 loadMore
+  Timer? _scrollThrottle;
+
   @override
   void initState() {
     super.initState();
@@ -118,24 +122,24 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
 
   @override
   void dispose() {
+    _scrollThrottle?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
-  /// 滚动监听,接近底部时加载更多
+  /// 【优化】滚动监听 + 节流，避免频繁触发 loadMore
   void _onScroll() {
-    if (_isLoadingMore || _currentAlbum == null) return;
-
-    // 当滚动到距离底部1000像素时开始加载更多
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.position.pixels;
-
-    if (maxScroll - currentScroll < 1000) {
-      // 检查是否还有更多照片要加载
-      if (_mediaList.length < _totalCount) {
-        _loadMorePhotos();
+    if (_scrollThrottle?.isActive ?? false) return;
+    _scrollThrottle = Timer(const Duration(milliseconds: 200), () {
+      if (_isLoadingMore || _currentAlbum == null) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.position.pixels;
+      if (maxScroll - currentScroll < 1000) {
+        if (_mediaList.length < _totalCount) {
+          _loadMorePhotos();
+        }
       }
-    }
+    });
   }
 
   /// 请求权限并加载照片
@@ -411,18 +415,18 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
     }
   }
 
-  /// 加载更多照片(分页)
+  /// 【优化】加载更多照片(分页) — 分批 addAll 避免一次性大量插入卡顿
   Future<void> _loadMorePhotos() async {
     if (_isLoadingMore || _currentAlbum == null) return;
 
-    setState(() => _isLoadingMore = true);
+    _isLoadingMore = true;
 
     try {
       final int start = _mediaList.length;
       final int end = (start + _pageSize) > _totalCount ? _totalCount : (start + _pageSize);
 
       if (start >= _totalCount) {
-        setState(() => _isLoadingMore = false);
+        _isLoadingMore = false;
         return;
       }
 
@@ -435,20 +439,29 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
 
       print('Loaded ${moreMedia.length} more photos');
 
-      if (mounted) {
-        setState(() {
-          _mediaList.addAll(moreMedia);
-          _currentPage++;
-          _isLoadingMore = false;
-        });
+      if (mounted && moreMedia.isNotEmpty) {
+        // 分批插入，每批 20 个，帧间隙让出主线程
+        const int batchSize = 20;
+        for (int i = 0; i < moreMedia.length; i += batchSize) {
+          if (!mounted) break;
+          final batchEnd = (i + batchSize).clamp(0, moreMedia.length);
+          final batch = moreMedia.sublist(i, batchEnd);
+          setState(() {
+            _mediaList.addAll(batch);
+          });
+          // 让出一帧，避免连续 setState 阻塞渲染
+          if (batchEnd < moreMedia.length) {
+            await Future.delayed(Duration.zero);
+          }
+        }
+        _currentPage++;
         // 后台批量预检测新加载的 live photo
         _batchDetectLivePhotos(moreMedia);
       }
     } catch (e) {
       print('Error loading more photos: $e');
-      if (mounted) {
-        setState(() => _isLoadingMore = false);
-      }
+    } finally {
+      _isLoadingMore = false;
     }
   }
 
@@ -730,18 +743,9 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
                             isSelected: isSelected,
                             selectionOrder: selectionOrder,
                             enableLiveVideo: enableLiveVideo,
-                            onTap: () async {
-                              // 点击图片预览照片
-                              // 先检测是否是实况照片
-                              bool isLive = false;
-                              try {
-                                final file = await asset.file;
-                                if (file != null) {
-                                  isLive = await MotionPhotos(file.path).isMotionPhoto();
-                                }
-                              } catch (e) {
-                                print('Error checking live photo: $e');
-                              }
+                            onTap: () {
+                              // 【优化】直接从缓存读取 live photo 状态，不再重复 I/O
+                              final isLive = _livePhotoCache[asset.id] ?? false;
                               _previewPhoto(asset, isLive);
                             },
                             onLongPress: () => _toggleSelection(asset),
@@ -824,52 +828,11 @@ class _PhotoItem extends StatefulWidget {
   State<_PhotoItem> createState() => _PhotoItemState();
 }
 
-class _PhotoItemState extends State<_PhotoItem> {
-  Uint8List? _cachedThumbnail;
-
-  bool get _isLivePhoto => _livePhotoCache[widget.asset.id] == true;
-
+/// 【优化】使用 AutomaticKeepAliveClientMixin 防止频繁销毁重建
+class _PhotoItemState extends State<_PhotoItem>
+    with AutomaticKeepAliveClientMixin {
   @override
-  void initState() {
-    super.initState();
-    _loadThumbnail();
-    _livePhotoCacheVersion.addListener(_onCacheUpdated);
-  }
-
-  @override
-  void dispose() {
-    _livePhotoCacheVersion.removeListener(_onCacheUpdated);
-    super.dispose();
-  }
-
-  void _onCacheUpdated() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void didUpdateWidget(_PhotoItem oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.asset != widget.asset) {
-      _cachedThumbnail = null;
-      _loadThumbnail();
-    }
-  }
-
-  /// 加载缩略图
-  Future<void> _loadThumbnail() async {
-    if (_cachedThumbnail != null) return;
-
-    try {
-      final thumbnail = await widget.asset.thumbnailDataWithSize(const ThumbnailSize.square(200));
-      if (mounted && thumbnail != null) {
-        setState(() {
-          _cachedThumbnail = thumbnail;
-        });
-      }
-    } catch (e) {
-      print('Error loading thumbnail: $e');
-    }
-  }
+  bool get wantKeepAlive => true;
 
   /// 格式化视频时长
   String _formatDuration(int seconds) {
@@ -887,25 +850,38 @@ class _PhotoItemState extends State<_PhotoItem> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin 必须调用
+
     return GestureDetector(
-      onTap: widget.onTap, // 点击预览
-      onLongPress: widget.onLongPress, // 长按选择
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 图片缩略图（使用缓存）
-          if (_cachedThumbnail != null)
-            Image.memory(
-              _cachedThumbnail!,
-              fit: BoxFit.cover,
-            )
-          else
-            Container(
-              color: Colors.grey[300],
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
+          // 【优化】使用 AssetEntityImage 替代 Image.memory + thumbnailDataWithSize
+          // 内部自带缓存管理，无需手动 Uint8List 缓存
+          AssetEntityImage(
+            widget.asset,
+            isOriginal: false,
+            thumbnailSize: const ThumbnailSize.square(200),
+            thumbnailFormat: ThumbnailFormat.jpeg,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: Colors.grey[300],
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[300],
+                child: const Center(child: Icon(Icons.broken_image, size: 24)),
+              );
+            },
+          ),
 
           // 遮罩层（选中时）
           if (widget.isSelected)
@@ -913,46 +889,53 @@ class _PhotoItemState extends State<_PhotoItem> {
               color: Colors.white.withOpacity(0.3),
             ),
 
-          // Live Photo 标记（左下角，仅实况照片）
-          if (_isLivePhoto && widget.asset.type != AssetType.video)
+          // 【优化】Live Photo 标记 — 用 ValueListenableBuilder 局部刷新，
+          // 不再监听全局 ValueNotifier 导致整个 item setState
+          if (widget.asset.type != AssetType.video)
             Positioned(
               left: 4,
               bottom: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Stack(
-                  children: [
-                    const Row(
-                      mainAxisSize: MainAxisSize.min,
+              child: ValueListenableBuilder<int>(
+                valueListenable: _livePhotoCacheVersion,
+                builder: (context, _, __) {
+                  final isLive = _livePhotoCache[widget.asset.id] == true;
+                  if (!isLive) return const SizedBox.shrink();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Stack(
                       children: [
-                        Icon(Icons.album, color: Colors.white, size: 12),
-                        SizedBox(width: 2),
-                        Text(
-                          'Live',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.album, color: Colors.white, size: 12),
+                            SizedBox(width: 2),
+                            Text(
+                              'Live',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
+                        if (!widget.enableLiveVideo)
+                          Positioned.fill(
+                            child: Center(
+                              child: Container(
+                                height: 1.5,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                    // 删除线（如果禁用实况）
-                    if (!widget.enableLiveVideo)
-                      Positioned.fill(
-                        child: Center(
-                          child: Container(
-                            height: 1.5,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
 
@@ -983,9 +966,7 @@ class _PhotoItemState extends State<_PhotoItem> {
             top: 4,
             right: 4,
             child: GestureDetector(
-              onTap: () {
-                widget.onSelectTap(); // 点击选择框直接选择，不进入预览
-              },
+              onTap: widget.onSelectTap,
               child: widget.isSelected
                   ? Container(
                       width: 24,

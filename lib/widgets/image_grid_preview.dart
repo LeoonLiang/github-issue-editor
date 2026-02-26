@@ -21,9 +21,9 @@ class ImageGridPreview extends StatelessWidget {
 
     final List<IssueImageInfo> images = [];
 
-    // 正则表达式匹配：![image](url){...}
+    // 正则表达式匹配：![任意alt](url){...}，兼容 ![image]、![图片] 等
     final RegExp imageRegex = RegExp(
-      r'!\[image\]\((https?://[^\)]+)\)\{([^\}]+)\}',
+      r'!\[[^\]]*\]\((https?://[^\)]+)\)\{([^\}]+)\}',
       multiLine: true,
     );
 
