@@ -9,58 +9,7 @@ import 'package:motion_photos/motion_photos.dart';
 import 'package:video_player/video_player.dart';
 import 'photo_preview_page.dart';
 import '../services/image_edit_service.dart';
-
-/// 全局 live photo 检测缓存（避免重复检测）
-final Map<String, bool> _livePhotoCache = {};
-
-/// 通知 widget 缓存已更新（widget 监听此 notifier 来刷新 UI）
-final ValueNotifier<int> _livePhotoCacheVersion = ValueNotifier<int>(0);
-
-/// 批量预检测 live photo（在加载照片后后台调用）
-/// iOS: 通过 asset.subtype 元数据判断，零 I/O
-/// Android: 通过 MotionPhotos 库逐个检测，带并发控制
-Future<void> _batchDetectLivePhotos(List<AssetEntity> assets) async {
-  // 过滤掉视频和已缓存的
-  final toCheck = assets.where((a) =>
-    a.type != AssetType.video && !_livePhotoCache.containsKey(a.id)
-  ).toList();
-
-  if (toCheck.isEmpty) return;
-
-  if (Platform.isIOS) {
-    // iOS: subtype bit 3 (值 8) 表示 Live Photo，纯元数据，瞬间完成
-    for (final asset in toCheck) {
-      _livePhotoCache[asset.id] = (asset.subtype & 8) != 0;
-    }
-    _livePhotoCacheVersion.value++;
-    return;
-  }
-
-  // Android: 需要读文件检测，每次 2 个并发，分批处理避免卡顿
-  for (var i = 0; i < toCheck.length; i += 2) {
-    final batch = toCheck.skip(i).take(2).toList();
-    await Future.wait(batch.map(_detectSingleLivePhoto));
-    _livePhotoCacheVersion.value++;
-  }
-}
-
-/// 检测单个 asset 是否为 live photo (Android)
-Future<void> _detectSingleLivePhoto(AssetEntity asset) async {
-  try {
-    final file = await asset.originFile;
-    if (file == null) {
-      _livePhotoCache[asset.id] = false;
-      return;
-    }
-    final isLive = await Future.any([
-      MotionPhotos(file.path).isMotionPhoto(),
-      Future.delayed(const Duration(milliseconds: 800), () => false),
-    ]);
-    _livePhotoCache[asset.id] = isLive;
-  } catch (e) {
-    _livePhotoCache[asset.id] = false;
-  }
-}
+import '../utils/motion_photo_utils.dart';
 
 /// 选中的图片信息（包含实况选项）
 class SelectedImageInfo {
@@ -112,6 +61,39 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
 
   // 【优化】滚动节流 Timer，避免频繁触发 loadMore
   Timer? _scrollThrottle;
+
+  // Live Photo 异步检测缓存
+  final Map<String, bool> _liveCache = {};
+
+  /// 异步检测单个 asset 是否为 Live Photo（带缓存）
+  /// iOS: subtype 元数据；Android: 读前 64KB XMP
+  Future<bool> _checkLive(AssetEntity asset) async {
+    if (asset.type == AssetType.video) return false;
+    if (_liveCache.containsKey(asset.id)) return _liveCache[asset.id]!;
+
+    bool isLive = false;
+    try {
+      if (Platform.isIOS) {
+        isLive = (asset.subtype & 8) != 0;
+      } else {
+        final file = await asset.file;
+        if (file != null) {
+          isLive = await isMotionPhotoFast(file);
+        }
+      }
+    } catch (_) {}
+
+    _liveCache[asset.id] = isLive;
+    return isLive;
+  }
+
+  /// 后台预扫描前 N 张的 Live 状态（不阻塞 UI）
+  void _preScanLive() {
+    final count = _mediaList.length.clamp(0, 80);
+    for (int i = 0; i < count; i++) {
+      _checkLive(_mediaList[i]);
+    }
+  }
 
   @override
   void initState() {
@@ -400,8 +382,7 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
           _currentPage = firstPageSize ~/ _pageSize; // 计算已加载的页数
           _isLoading = false;
         });
-        // 后台批量预检测 live photo（不阻塞 UI）
-        _batchDetectLivePhotos(media);
+        _preScanLive();
       }
     } catch (e, stackTrace) {
       print('Error loading album photos: $e');
@@ -440,23 +421,10 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
       print('Loaded ${moreMedia.length} more photos');
 
       if (mounted && moreMedia.isNotEmpty) {
-        // 分批插入，每批 20 个，帧间隙让出主线程
-        const int batchSize = 20;
-        for (int i = 0; i < moreMedia.length; i += batchSize) {
-          if (!mounted) break;
-          final batchEnd = (i + batchSize).clamp(0, moreMedia.length);
-          final batch = moreMedia.sublist(i, batchEnd);
-          setState(() {
-            _mediaList.addAll(batch);
-          });
-          // 让出一帧，避免连续 setState 阻塞渲染
-          if (batchEnd < moreMedia.length) {
-            await Future.delayed(Duration.zero);
-          }
-        }
+        setState(() {
+          _mediaList.addAll(moreMedia);
+        });
         _currentPage++;
-        // 后台批量预检测新加载的 live photo
-        _batchDetectLivePhotos(moreMedia);
       }
     } catch (e) {
       print('Error loading more photos: $e');
@@ -711,47 +679,46 @@ class _CustomImagePickerState extends State<CustomImagePicker> {
               ? const Center(child: Text('没有照片'))
               : Column(
                   children: [
-                    // 照片网格
                     Expanded(
-                      child: GridView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(2),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
-                        ),
-                        itemCount: _mediaList.length + (_isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // 底部加载指示器
-                          if (index == _mediaList.length) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                            );
-                          }
+                      child: Stack(
+                        children: [
+                          GridView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(2),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 2,
+                              mainAxisSpacing: 2,
+                            ),
+                            itemCount: _mediaList.length,
+                            itemBuilder: (context, index) {
+                              final asset = _mediaList[index];
+                              final isSelected = _selectedAssets.contains(asset);
+                              final selectionOrder = _getSelectionOrder(asset);
+                              final enableLiveVideo = _livePhotoEnabled[asset.id] ?? true;
 
-                          final asset = _mediaList[index];
-                          final isSelected = _selectedAssets.contains(asset);
-                          final selectionOrder = _getSelectionOrder(asset);
-                          final enableLiveVideo = _livePhotoEnabled[asset.id] ?? true;
-
-                          return _PhotoItem(
-                            asset: asset,
-                            isSelected: isSelected,
-                            selectionOrder: selectionOrder,
-                            enableLiveVideo: enableLiveVideo,
-                            onTap: () {
-                              // 【优化】直接从缓存读取 live photo 状态，不再重复 I/O
-                              final isLive = _livePhotoCache[asset.id] ?? false;
-                              _previewPhoto(asset, isLive);
+                              return _PhotoItem(
+                                asset: asset,
+                                isSelected: isSelected,
+                                selectionOrder: selectionOrder,
+                                enableLiveVideo: enableLiveVideo,
+                                onTap: () {
+                                  final isLive = _liveCache[asset.id] ?? false;
+                                  _previewPhoto(asset, isLive);
+                                },
+                                onLongPress: () => _toggleSelection(asset),
+                                onSelectTap: () => _toggleSelection(asset),
+                              );
                             },
-                            onLongPress: () => _toggleSelection(asset),
-                            onSelectTap: () => _toggleSelection(asset),
-                          );
-                        },
+                          ),
+                          if (_isLoadingMore)
+                            const Positioned(
+                              bottom: 16,
+                              left: 0,
+                              right: 0,
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -834,6 +801,29 @@ class _PhotoItemState extends State<_PhotoItem>
   @override
   bool get wantKeepAlive => true;
 
+  bool _isLive = false;
+  bool _checked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLive();
+  }
+
+  Future<void> _loadLive() async {
+    final pickerState = context.findAncestorStateOfType<_CustomImagePickerState>();
+    if (pickerState == null) return;
+    final isLive = await pickerState._checkLive(widget.asset);
+    if (mounted && isLive != _isLive) {
+      setState(() {
+        _isLive = isLive;
+        _checked = true;
+      });
+    } else {
+      _checked = true;
+    }
+  }
+
   /// 格式化视频时长
   String _formatDuration(int seconds) {
     final duration = Duration(seconds: seconds);
@@ -889,53 +879,45 @@ class _PhotoItemState extends State<_PhotoItem>
               color: Colors.white.withOpacity(0.3),
             ),
 
-          // 【优化】Live Photo 标记 — 用 ValueListenableBuilder 局部刷新，
-          // 不再监听全局 ValueNotifier 导致整个 item setState
-          if (widget.asset.type != AssetType.video)
+          // Live Photo 标记 — 异步检测完成后显示
+          if (_checked && _isLive)
             Positioned(
               left: 4,
               bottom: 4,
-              child: ValueListenableBuilder<int>(
-                valueListenable: _livePhotoCacheVersion,
-                builder: (context, _, __) {
-                  final isLive = _livePhotoCache[widget.asset.id] == true;
-                  if (!isLive) return const SizedBox.shrink();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Stack(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Stack(
+                  children: [
+                    const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.album, color: Colors.white, size: 12),
-                            SizedBox(width: 2),
-                            Text(
-                              'Live',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (!widget.enableLiveVideo)
-                          Positioned.fill(
-                            child: Center(
-                              child: Container(
-                                height: 1.5,
-                                color: Colors.red,
-                              ),
-                            ),
+                        Icon(Icons.album, color: Colors.white, size: 12),
+                        SizedBox(width: 2),
+                        Text(
+                          'Live',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
                       ],
                     ),
-                  );
-                },
+                    if (!widget.enableLiveVideo)
+                      Positioned.fill(
+                        child: Center(
+                          child: Container(
+                            height: 1.5,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
 
